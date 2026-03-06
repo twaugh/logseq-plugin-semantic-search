@@ -8,9 +8,11 @@ import { getSettings } from "./settings";
 interface DisplayResult extends SearchResult {
   pageName: string;
   content: string;
+  isJournal: boolean;
 }
 
 let progressInterval: ReturnType<typeof setInterval> | undefined;
+let lastDisplayResults: DisplayResult[] = [];
 
 export function createSearchModal(): void {
   const app = document.getElementById("app");
@@ -27,6 +29,10 @@ export function createSearchModal(): void {
         <div class="ss-status" id="ss-status"></div>
         <div class="ss-results" id="ss-results"></div>
         <div class="ss-footer">
+          <label class="ss-checkbox-label" id="ss-journal-label">
+            <input type="checkbox" id="ss-include-journal" checked />
+            Include journal
+          </label>
           <button class="ss-reindex" id="ss-reindex">Re-index</button>
         </div>
       </div>
@@ -37,6 +43,7 @@ export function createSearchModal(): void {
   const closeBtn = document.getElementById("ss-close")!;
   const reindexBtn = document.getElementById("ss-reindex")!;
   const overlay = document.getElementById("ss-overlay")!;
+  const journalCheckbox = document.getElementById("ss-include-journal") as HTMLInputElement;
 
   const debouncedSearch = debounce(async (...args: unknown[]) => {
     const query = args[0] as string;
@@ -55,6 +62,10 @@ export function createSearchModal(): void {
   closeBtn.addEventListener("click", hideModal);
   overlay.addEventListener("click", (e) => {
     if (e.target === overlay) hideModal();
+  });
+
+  journalCheckbox.addEventListener("change", () => {
+    renderFilteredResults();
   });
 
   reindexBtn.addEventListener("click", () => {
@@ -161,22 +172,26 @@ async function performSearch(query: string): Promise<void> {
         if (!block) continue;
 
         let pageName = "Unknown";
+        let isJournal = false;
         if (block.page?.id) {
           const page = await logseq.Editor.getPage(block.page.id);
           pageName = page?.originalName ?? page?.name ?? "Unknown";
+          isJournal = page?.["journal?"] ?? false;
         }
 
         displayResults.push({
           ...result,
           pageName,
           content: block.content ?? "",
+          isJournal,
         });
       } catch {
         // Skip blocks we can't fetch
       }
     }
 
-    renderResults(displayResults);
+    lastDisplayResults = displayResults;
+    renderFilteredResults();
   } catch (err) {
     resultsEl.innerHTML = `<div class="ss-error">${(err as Error).message}</div>`;
   }
@@ -229,9 +244,19 @@ function renderResults(results: DisplayResult[]): void {
   }
 }
 
+function renderFilteredResults(): void {
+  const checkbox = document.getElementById("ss-include-journal") as HTMLInputElement | null;
+  const includeJournal = checkbox?.checked ?? true;
+  const filtered = includeJournal
+    ? lastDisplayResults
+    : lastDisplayResults.filter((r) => !r.isJournal);
+  renderResults(filtered);
+}
+
 function clearResults(): void {
   const resultsEl = document.getElementById("ss-results");
   if (resultsEl) resultsEl.innerHTML = "";
+  lastDisplayResults = [];
 }
 
 function escapeHtml(text: string): string {

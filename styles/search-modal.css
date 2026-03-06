@@ -127,7 +127,18 @@
   padding: 12px 16px;
   border-top: 1px solid var(--ls-border-color, #e0e0e0);
   display: flex;
-  justify-content: flex-start;
+  align-items: center;
+  gap: 12px;
+}
+
+.ss-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--ls-secondary-text-color, #999);
+  cursor: pointer;
+  user-select: none;
 }
 
 .ss-reindex {
