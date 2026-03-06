@@ -1,7 +1,7 @@
 {
   "name": "logseq-plugin-semantic-search",
   "version": "0.1.0",
-  "description": "Semantic search across all Logseq blocks using text embeddings",
+  "description": "Search your Logseq notes by meaning, not just keywords",
   "main": "dist/index.html",
   "scripts": {
     "dev": "vite",
