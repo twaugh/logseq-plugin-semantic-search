@@ -20,7 +20,11 @@ npm install
 npm run build
 ```
 
-2. In Logseq, go to **Plugins → Load unpacked plugin** and select this directory.
+2. In Logseq, enable Developer Mode so you can load plugins from a directory. 
+
+Do that here: **Settings > Advanced > Developer Mode**
+
+3. In Logseq, go to **Plugins → Load unpacked plugin** and select this directory.
 
 ## Usage
 
