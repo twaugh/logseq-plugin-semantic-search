@@ -1,4 +1,4 @@
-import { normalizeContent, hashContent, truncate } from "./utils";
+import { normalizeContent, hashContent, truncate, formatPageProperties } from "./utils";
 import { embedTexts } from "./embeddings";
 import {
   getEmbedding,
@@ -29,6 +29,67 @@ interface BlockResult {
   uuid: string;
   content: string;
   page?: { id: number };
+  parent?: { id: number };
+}
+
+const SCHEMA_VERSION = 2;
+
+interface PageInfo {
+  name: string;
+  properties: Record<string, any>;
+}
+
+async function buildEmbeddingText(
+  block: BlockResult,
+  pageCache: Map<number, PageInfo>,
+  parentCache: Map<number, string>,
+): Promise<string> {
+  const parts: string[] = [];
+  const pageId = block.page?.id ?? 0;
+
+  // Page context
+  if (pageId) {
+    let pageInfo = pageCache.get(pageId);
+    if (!pageInfo) {
+      const page = await logseq.Editor.getPage(pageId);
+      pageInfo = {
+        name: page?.originalName ?? page?.name ?? "",
+        properties: page?.properties ?? {},
+      };
+      pageCache.set(pageId, pageInfo);
+    }
+    if (pageInfo.name) {
+      let pageLine = `[Page: ${pageInfo.name}]`;
+      const propsStr = formatPageProperties(pageInfo.properties);
+      if (propsStr) pageLine += ` ${propsStr}`;
+      parts.push(pageLine);
+    }
+  }
+
+  // Ancestor context (walk up parent chain)
+  const ancestors: string[] = [];
+  let currentId = block.parent?.id;
+  while (currentId && currentId !== pageId) {
+    let content = parentCache.get(currentId);
+    if (content === undefined) {
+      const parentBlock = await logseq.Editor.getBlock(currentId);
+      content = parentBlock?.content ? normalizeContent(parentBlock.content) : "";
+      parentCache.set(currentId, content);
+      // Get next parent
+      currentId = parentBlock?.parent?.id;
+    } else {
+      // Content was cached but we still need to walk up; fetch block for parent pointer
+      const parentBlock = await logseq.Editor.getBlock(currentId);
+      currentId = parentBlock?.parent?.id;
+    }
+    if (content) ancestors.unshift(`> ${content}`);
+  }
+  parts.push(...ancestors);
+
+  // Block's own content
+  parts.push(normalizeContent(block.content));
+
+  return parts.join("\n");
 }
 
 export function cancelIndexing(): void {
@@ -49,6 +110,14 @@ export async function indexBlocks(
   const settings = getSettings();
 
   try {
+    // Check if schema version changed
+    const storedSchema = await getMetadata("schemaVersion");
+    if (!storedSchema || (storedSchema as number) < SCHEMA_VERSION) {
+      await clearAllEmbeddings();
+      logseq.UI.showMsg("Embedding format changed, re-indexing all blocks...");
+      await setMetadata("schemaVersion", SCHEMA_VERSION);
+    }
+
     // Check if model changed
     const storedModel = await getMetadata("model");
     if (storedModel && storedModel !== settings.embeddingModel) {
@@ -58,7 +127,7 @@ export async function indexBlocks(
     await setMetadata("model", settings.embeddingModel);
 
     // Query all blocks
-    const query = `[:find (pull ?b [:db/id :block/uuid :block/content :block/page])
+    const query = `[:find (pull ?b [:db/id :block/uuid :block/content :block/page :block/parent])
      :where [?b :block/content ?c] [(>= (count ?c) ${settings.minBlockLength})]]`;
     const results: BlockResult[][] = await logseq.DB.datascriptQuery(query);
     const blocks = results.map((r) => r[0]);
@@ -75,6 +144,8 @@ export async function indexBlocks(
     }[] = [];
 
     const currentBlockIds = new Set<string>();
+    const pageCache = new Map<number, PageInfo>();
+    const parentCache = new Map<number, string>();
 
     for (const block of blocks) {
       if (abort.signal.aborted) return;
@@ -86,13 +157,14 @@ export async function indexBlocks(
       const normalized = normalizeContent(block.content);
       if (normalized.length < settings.minBlockLength) continue;
 
-      const hash = await hashContent(normalized);
+      const embeddingText = await buildEmbeddingText(block, pageCache, parentCache);
+      const hash = await hashContent(embeddingText);
       const existing = await getEmbedding(blockId);
 
       if (!existing || existing.contentHash !== hash) {
         toEmbed.push({
           blockId,
-          content: truncate(normalized, 4000),
+          content: truncate(embeddingText, 4000),
           hash,
           pageId: block.page?.id ?? 0,
         });

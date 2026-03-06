@@ -45,3 +45,19 @@ export function truncate(text: string, maxLength: number): string {
   if (text.length <= maxLength) return text;
   return text.slice(0, maxLength);
 }
+
+const SKIP_PROPERTIES = new Set([
+  "id", "filters", "collapsed", "icon",
+  "public", "exclude-from-graph-view",
+]);
+
+export function formatPageProperties(props: Record<string, any>): string {
+  const entries = Object.entries(props)
+    .filter(([k]) => !SKIP_PROPERTIES.has(k))
+    .map(([k, v]) => {
+      const val = Array.isArray(v) ? v.join(", ") : String(v);
+      return `${k}: ${val}`;
+    });
+  if (entries.length === 0) return "";
+  return `[${entries.join(", ")}]`;
+}

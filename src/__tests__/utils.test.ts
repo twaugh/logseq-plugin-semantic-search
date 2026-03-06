@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { normalizeContent, hashContent, debounce } from "../utils";
+import { normalizeContent, hashContent, debounce, formatPageProperties } from "../utils";
 
 describe("normalizeContent", () => {
   it("strips property lines", () => {
@@ -60,6 +60,31 @@ describe("hashContent", () => {
     const h1 = await hashContent("hello");
     const h2 = await hashContent("world");
     expect(h1).not.toBe(h2);
+  });
+});
+
+describe("formatPageProperties", () => {
+  it("formats simple properties", () => {
+    expect(formatPageProperties({ tags: "meeting", category: "work" })).toBe(
+      "[tags: meeting, category: work]",
+    );
+  });
+
+  it("formats array properties", () => {
+    expect(formatPageProperties({ tags: ["project-x", "planning"] })).toBe(
+      "[tags: project-x, planning]",
+    );
+  });
+
+  it("skips internal properties", () => {
+    expect(formatPageProperties({ id: "123", filters: {}, tags: "meeting" })).toBe(
+      "[tags: meeting]",
+    );
+  });
+
+  it("returns empty string for no useful properties", () => {
+    expect(formatPageProperties({})).toBe("");
+    expect(formatPageProperties({ id: "123", collapsed: true })).toBe("");
   });
 });
 
