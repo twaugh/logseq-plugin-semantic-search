@@ -1,5 +1,135 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-  <circle cx="11" cy="11" r="8"/>
-  <line x1="21" y1="21" x2="16.65" y2="16.65"/>
-  <path d="M8 11h6M11 8v6" opacity="0.5"/>
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   viewBox="0 0 24 24"
+   fill="none"
+   stroke="black"
+   stroke-linecap="round"
+   stroke-linejoin="round"
+   version="1.1"
+   id="svg9"
+   sodipodi:docname="icon.svg"
+   inkscape:version="1.4.3 (0d15f75042, 2025-12-25)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs9" />
+  <sodipodi:namedview
+     id="namedview9"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:zoom="23.4375"
+     inkscape:cx="4.1173333"
+     inkscape:cy="10.56"
+     inkscape:window-width="3440"
+     inkscape:window-height="1362"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg9" />
+  <!-- Beam of light -->
+  <path
+     d="M 7.912,6.1066667 22,1.5 v 11 z"
+     fill="#ffd700"
+     opacity="0.25"
+     stroke="none"
+     id="path1"
+     sodipodi:nodetypes="cccc" />
+  <line
+     x1="9"
+     y1="5.5"
+     x2="22"
+     y2="1.5"
+     stroke="#B8960C"
+     stroke-width="0.7"
+     opacity="0.5"
+     id="line1" />
+  <line
+     x1="9"
+     y1="7"
+     x2="22"
+     y2="12.5"
+     stroke="#B8960C"
+     stroke-width="0.7"
+     opacity="0.5"
+     id="line2" />
+  <!-- AI sparkles in the beam - single-path 4-pointed stars -->
+  <!-- Large sparkle -->
+  <path
+     d="m 19.274666,3.674 q 0.3,2.52 2,2.8 -1.7,0.28 -2,2.8 -0.3,-2.52 -2,-2.8 1.7,-0.28 2,-2.8"
+     fill="#daa520"
+     stroke="none"
+     id="path2"
+     style="stroke-width:1.18322" />
+  <!-- Medium sparkle -->
+  <path
+     d="m 17.318666,6.65 q 0.2,1.2222222 1.3,1.4666667 -1.1,0.2444444 -1.3,1.4666666 -0.2,-1.2222222 -1.3,-1.4666666 1.1,-0.2444445 1.3,-1.4666667"
+     fill="#daa520"
+     stroke="none"
+     id="path3"
+     style="stroke-width:1.10554" />
+  <!-- Small sparkle -->
+  <path
+     d="m 17.676,3.674 q 0.15,0.952 0.9,1.088 -0.75,0.136 -0.9,1.088 -0.15,-0.952 -0.9,-1.088 0.75,-0.136 0.9,-1.088"
+     fill="#daa520"
+     stroke="none"
+     id="path4"
+     style="stroke-width:1.16619" />
+  <!-- Tower body -->
+  <path
+     d="M3.5,22 L5.5,7 L8.5,7 L10.5,22"
+     stroke-width="1.5"
+     fill="white"
+     id="path5"
+     style="stroke-width:1;stroke-dasharray:none" />
+  <!-- Red stripes -->
+  <path
+     d="M4.8,13 L5.2,11 L8.8,11 L9.2,13 Z"
+     fill="#CC3333"
+     stroke="none"
+     id="path6" />
+  <path
+     d="M4.1,17 L4.5,15 L9.5,15 L9.9,17 Z"
+     fill="#CC3333"
+     stroke="none"
+     id="path7" />
+  <!-- Tower outline on top of stripes -->
+  <path
+     d="M3.5,22 L5.5,7 L8.5,7 L10.5,22"
+     stroke-width="1.5"
+     fill="none"
+     id="path8"
+     style="stroke-width:1;stroke-dasharray:none" />
+  <!-- Lantern room -->
+  <rect
+     x="5"
+     y="5"
+     width="4"
+     height="2.5"
+     rx="0.5"
+     stroke-width="1.2"
+     fill="#FFD700"
+     id="rect8"
+     style="stroke-width:1;stroke-dasharray:none" />
+  <!-- Dome -->
+  <path
+     d="M5.5,5 Q7,2.5 8.5,5"
+     stroke-width="1.2"
+     id="path9"
+     style="stroke-width:1;stroke-dasharray:none" />
+  <!-- Base -->
+  <line
+     x1="2.5"
+     y1="22"
+     x2="11.5"
+     y2="22"
+     stroke-width="1.5"
+     id="line9"
+     style="stroke-width:1;stroke-dasharray:none" />
 </svg>
