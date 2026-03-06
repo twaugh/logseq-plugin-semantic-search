@@ -1,0 +1,57 @@
+# Logseq Semantic Search
+
+Search across all your Logseq blocks using text embeddings. Instead of matching exact keywords, semantic search finds blocks that are **conceptually similar** to your query.
+
+Blocks are embedded with their full context — page name, page properties, and parent block hierarchy — so searching for a page topic or parent heading surfaces relevant child blocks.
+
+## Requirements
+
+An embedding API server. Either:
+
+- **[Ollama](https://ollama.com/)** (default) — run locally with `ollama pull nomic-embed-text`
+- Any **OpenAI-compatible** embedding API
+
+## Installation
+
+1. Build the plugin:
+
+```sh
+npm install
+npm run build
+```
+
+2. In Logseq, go to **Plugins → Load unpacked plugin** and select this directory.
+
+## Usage
+
+Open the search modal with any of:
+
+- **Alt+K** keyboard shortcut
+- Toolbar search icon
+- `/Semantic Search` slash command
+
+Type a query and results appear ranked by similarity. Click a result to navigate to that block.
+
+The **Include journal** checkbox in the footer controls whether results from journal pages are shown.
+
+Click **Re-index** to rebuild the embedding index. By default, blocks are automatically indexed when the graph loads and only changed blocks are re-embedded on subsequent runs.
+
+## Settings
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| API Endpoint | `http://localhost:11434` | Ollama or compatible server URL |
+| API Format | `ollama` | `ollama` (`/api/embed`) or `openai` (`/v1/embeddings`) |
+| Embedding Model | `nomic-embed-text` | Model name for embedding requests |
+| Batch Size | `50` | Number of texts per API request |
+| Top K Results | `20` | Maximum number of search results |
+| Minimum Block Length | `10` | Skip blocks shorter than this (characters) |
+| Auto-index on Load | `true` | Automatically index when the graph loads |
+
+## Development
+
+```sh
+npm run dev      # Start dev server
+npm test         # Run tests
+npm run build    # Production build
+```
