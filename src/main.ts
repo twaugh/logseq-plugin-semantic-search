@@ -34,6 +34,13 @@ async function main() {
     showModal();
   });
 
+  // Register keyboard shortcut
+  logseq.App.registerCommandShortcut(
+    { binding: "alt+k" },
+    () => { showModal(); },
+    { label: "Semantic Search" },
+  );
+
   // Auto-index on load
   const settings = getSettings();
   if (settings.autoIndexOnLoad) {
