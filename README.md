@@ -33,7 +33,7 @@ Open the search modal with any of:
 - **Alt+K** keyboard shortcut
 - Toolbar search icon
 
-![Semantic Search dialog](docs/demo.gif)
+![Demo](docs/demo.gif)
 
 Type a query and results appear ranked by similarity. Click a result to navigate to that block.
 
