@@ -14,6 +14,7 @@ interface DisplayResult extends SearchResult {
 
 let progressInterval: ReturnType<typeof setInterval> | undefined;
 let lastDisplayResults: DisplayResult[] = [];
+let lastQuery = "";
 
 export function createSearchModal(): void {
   const app = document.getElementById("app");
@@ -159,6 +160,7 @@ async function performSearch(query: string): Promise<void> {
   if (!resultsEl) return;
 
   resultsEl.innerHTML = '<div class="ss-loading">Searching...</div>';
+  lastQuery = query;
 
   try {
     const settings = getSettings();
@@ -309,6 +311,7 @@ function escapeHtml(text: string): string {
 }
 
 export function showModal(): void {
+  clearResults();
   logseq.showMainUI();
   if (indexingState.status === "idle") {
     startIndexing();
@@ -318,10 +321,13 @@ export function showModal(): void {
   setTimeout(() => {
     const input = document.getElementById("ss-input") as HTMLInputElement;
     if (input) {
-      input.value = "";
+      input.value = lastQuery;
       input.focus();
+      input.select();
+      if (lastQuery) {
+        performSearch(lastQuery);
+      }
     }
-    clearResults();
   }, 50);
 }
 
