@@ -15,6 +15,10 @@ interface DisplayResult extends SearchResult {
 let progressInterval: ReturnType<typeof setInterval> | undefined;
 let lastDisplayResults: DisplayResult[] = [];
 let lastQuery = "";
+const queryHistory: string[] = [];
+const MAX_HISTORY = 20;
+let historyIndex = -1;
+let pendingInput = "";
 
 export function createSearchModal(): void {
   const app = document.getElementById("app");
@@ -53,6 +57,7 @@ export function createSearchModal(): void {
   }, 300);
 
   input.addEventListener("input", () => {
+    historyIndex = -1;
     const query = input.value.trim();
     if (query.length > 0) {
       debouncedSearch(query);
@@ -96,7 +101,51 @@ function handleKeydown(e: KeyboardEvent): void {
     return;
   }
 
+  const input = document.getElementById("ss-input") as HTMLInputElement | null;
   const results = document.getElementById("ss-results");
+
+  // History cycling: Up/Down when input is focused and no result is active
+  if (input && document.activeElement === input && queryHistory.length > 0) {
+    const active = results?.querySelector(".ss-result-item.active");
+    if (!active) {
+      if (e.key === "ArrowUp" && input.selectionStart === 0) {
+        e.preventDefault();
+        if (historyIndex === -1) pendingInput = input.value;
+        let newIndex = historyIndex;
+        while (newIndex < queryHistory.length - 1) {
+          newIndex++;
+          const candidate = queryHistory[queryHistory.length - 1 - newIndex];
+          if (candidate !== input.value.trim()) {
+            historyIndex = newIndex;
+            input.value = candidate;
+            input.select();
+            if (candidate.trim()) performSearch(candidate.trim());
+            return;
+          }
+        }
+        return;
+      }
+      if (e.key === "ArrowDown" && historyIndex > -1) {
+        e.preventDefault();
+        historyIndex--;
+        if (historyIndex === -1) {
+          input.value = pendingInput;
+          if (pendingInput.trim()) {
+            performSearch(pendingInput.trim());
+          } else {
+            clearResults();
+          }
+        } else {
+          const query = queryHistory[queryHistory.length - 1 - historyIndex];
+          input.value = query;
+          input.select();
+          if (query.trim()) performSearch(query.trim());
+        }
+        return;
+      }
+    }
+  }
+
   if (!results) return;
 
   const items = results.querySelectorAll(".ss-result-item");
@@ -125,11 +174,20 @@ function handleKeydown(e: KeyboardEvent): void {
   }
 }
 
+function addToHistory(query: string): void {
+  if (!query) return;
+  const existingIdx = queryHistory.indexOf(query);
+  if (existingIdx !== -1) queryHistory.splice(existingIdx, 1);
+  queryHistory.push(query);
+  if (queryHistory.length > MAX_HISTORY) queryHistory.shift();
+}
+
 function hideModal(): void {
   if (progressInterval) {
     clearInterval(progressInterval);
     progressInterval = undefined;
   }
+  addToHistory(lastQuery);
   logseq.hideMainUI();
 }
 
@@ -339,6 +397,7 @@ export function showModal(): void {
   } else {
     startStatusPolling();
   }
+  historyIndex = -1;
   setTimeout(() => {
     const input = document.getElementById("ss-input") as HTMLInputElement;
     if (input) {
