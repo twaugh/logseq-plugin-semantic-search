@@ -2,6 +2,7 @@ import "@logseq/libs";
 import { settingsSchema } from "./settings";
 import { getSettings } from "./settings";
 import { indexBlocks } from "./indexer";
+import { setGraphName } from "./storage";
 import { createSearchModal, showModal } from "./ui";
 
 async function main() {
@@ -40,15 +41,21 @@ async function main() {
   const settings = getSettings();
   if (settings.autoIndexOnLoad) {
     // Delay to let Logseq finish loading
-    setTimeout(() => {
-      indexBlocks().catch((err) => {
+    setTimeout(async () => {
+      try {
+        const graph = await logseq.App.getCurrentGraph();
+        if (graph?.name) setGraphName(graph.name);
+        await indexBlocks();
+      } catch (err) {
         console.error("Auto-indexing failed:", err);
-      });
+      }
     }, 3000);
   }
 
   // Re-index on graph change
-  logseq.App.onCurrentGraphChanged(() => {
+  logseq.App.onCurrentGraphChanged(async () => {
+    const graph = await logseq.App.getCurrentGraph();
+    if (graph?.name) setGraphName(graph.name);
     const s = getSettings();
     if (s.autoIndexOnLoad) {
       setTimeout(() => {

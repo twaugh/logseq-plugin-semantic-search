@@ -1,7 +1,18 @@
-const DB_NAME = "semantic-search-embeddings";
+const DB_PREFIX = "semantic-search-embeddings";
 const DB_VERSION = 1;
 const EMBEDDINGS_STORE = "embeddings";
 const METADATA_STORE = "metadata";
+
+let graphName = "";
+
+export function setGraphName(name: string): void {
+  graphName = name;
+}
+
+function getDBName(): string {
+  if (!graphName) return DB_PREFIX;
+  return `${DB_PREFIX}-${graphName}`;
+}
 
 export interface EmbeddingRecord {
   blockId: string;
@@ -18,7 +29,7 @@ export interface MetadataRecord {
 
 function openDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, DB_VERSION);
+    const request = indexedDB.open(getDBName(), DB_VERSION);
     request.onupgradeneeded = () => {
       const db = request.result;
       if (!db.objectStoreNames.contains(EMBEDDINGS_STORE)) {

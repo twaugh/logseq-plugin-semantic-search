@@ -9,9 +9,11 @@ import {
   getMetadata,
   setMetadata,
   getEmbeddingCount,
+  setGraphName,
 } from "../storage";
 
 beforeEach(async () => {
+  setGraphName("test-graph");
   // Clear databases between tests
   const dbs = await indexedDB.databases();
   for (const db of dbs) {
