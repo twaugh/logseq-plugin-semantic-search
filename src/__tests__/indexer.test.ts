@@ -1,10 +1,6 @@
 import "fake-indexeddb/auto";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-// Mock @logseq/libs
-const mockGetBlock = vi.fn();
-const mockGetPage = vi.fn();
-
 const mockLogseq = {
   settings: {
     apiEndpoint: "http://localhost:11434",
@@ -19,8 +15,8 @@ const mockLogseq = {
     datascriptQuery: vi.fn(),
   },
   Editor: {
-    getBlock: mockGetBlock,
-    getPage: mockGetPage,
+    getBlock: vi.fn(),
+    getPage: vi.fn(),
   },
   UI: {
     showMsg: vi.fn(),
@@ -39,15 +35,19 @@ import { getAllEmbeddings, setMetadata, setGraphName } from "../storage";
 
 const mockEmbedTexts = vi.mocked(embedTexts);
 
+function mockQueries(blocks: any[][], pages: any[][]) {
+  mockLogseq.DB.datascriptQuery
+    .mockResolvedValueOnce(blocks)   // block query (all blocks)
+    .mockResolvedValueOnce(pages);   // page query
+}
+
+const defaultPage = { id: 10, name: "test-page", originalName: "Test Page", properties: {} };
+
 beforeEach(async () => {
   vi.clearAllMocks();
   indexingState.status = "idle";
   indexingState.progress = { done: 0, total: 0 };
   setGraphName("test-graph");
-
-  // Default: getPage returns a simple page, getBlock returns null (no parent chain)
-  mockGetPage.mockResolvedValue({ originalName: "Test Page", properties: {} });
-  mockGetBlock.mockResolvedValue(null);
 
   // Clear IndexedDB
   const dbs = await indexedDB.databases();
@@ -58,10 +58,12 @@ beforeEach(async () => {
 
 describe("indexBlocks", () => {
   it("skips unchanged blocks", async () => {
-    mockLogseq.DB.datascriptQuery.mockResolvedValue([
+    const blocks = [
       [{ id: 1, uuid: "u1", content: "Hello world this is a test block", page: { id: 10 }, parent: { id: 10 } }],
-    ]);
+    ];
+    const pages = [[defaultPage]];
 
+    mockQueries(blocks, pages);
     mockEmbedTexts.mockResolvedValue([[0.1, 0.2, 0.3]]);
 
     // First index
@@ -70,22 +72,27 @@ describe("indexBlocks", () => {
 
     // Second index - same content, should skip
     mockEmbedTexts.mockClear();
+    mockQueries(blocks, pages);
     await indexBlocks();
     expect(mockEmbedTexts).not.toHaveBeenCalled();
   });
 
   it("re-embeds changed blocks", async () => {
-    mockLogseq.DB.datascriptQuery.mockResolvedValueOnce([
-      [{ id: 1, uuid: "u1", content: "Hello world this is a test block", page: { id: 10 }, parent: { id: 10 } }],
-    ]);
+    const pages = [[defaultPage]];
+
+    mockQueries(
+      [[{ id: 1, uuid: "u1", content: "Hello world this is a test block", page: { id: 10 }, parent: { id: 10 } }]],
+      pages,
+    );
     mockEmbedTexts.mockResolvedValue([[0.1, 0.2, 0.3]]);
 
     await indexBlocks();
 
     // Change content
-    mockLogseq.DB.datascriptQuery.mockResolvedValueOnce([
-      [{ id: 1, uuid: "u1", content: "Changed content that is different", page: { id: 10 }, parent: { id: 10 } }],
-    ]);
+    mockQueries(
+      [[{ id: 1, uuid: "u1", content: "Changed content that is different", page: { id: 10 }, parent: { id: 10 } }]],
+      pages,
+    );
     mockEmbedTexts.mockClear();
     mockEmbedTexts.mockResolvedValue([[0.4, 0.5, 0.6]]);
 
@@ -95,11 +102,14 @@ describe("indexBlocks", () => {
 
   it("batches correctly", async () => {
     // batchSize is 2
-    mockLogseq.DB.datascriptQuery.mockResolvedValue([
-      [{ id: 1, uuid: "u1", content: "First block with enough content", page: { id: 10 }, parent: { id: 10 } }],
-      [{ id: 2, uuid: "u2", content: "Second block with enough content", page: { id: 10 }, parent: { id: 10 } }],
-      [{ id: 3, uuid: "u3", content: "Third block with enough content", page: { id: 11 }, parent: { id: 11 } }],
-    ]);
+    mockQueries(
+      [
+        [{ id: 1, uuid: "u1", content: "First block with enough content", page: { id: 10 }, parent: { id: 10 } }],
+        [{ id: 2, uuid: "u2", content: "Second block with enough content", page: { id: 10 }, parent: { id: 10 } }],
+        [{ id: 3, uuid: "u3", content: "Third block with enough content", page: { id: 11 }, parent: { id: 11 } }],
+      ],
+      [[defaultPage], [{ id: 11, name: "page-2", originalName: "Page 2", properties: {} }]],
+    );
 
     mockEmbedTexts
       .mockResolvedValueOnce([[0.1], [0.2]])  // batch 1
@@ -113,10 +123,13 @@ describe("indexBlocks", () => {
   });
 
   it("tracks progress", async () => {
-    mockLogseq.DB.datascriptQuery.mockResolvedValue([
-      [{ id: 1, uuid: "u1", content: "Block one with enough content", page: { id: 10 }, parent: { id: 10 } }],
-      [{ id: 2, uuid: "u2", content: "Block two with enough content", page: { id: 10 }, parent: { id: 10 } }],
-    ]);
+    mockQueries(
+      [
+        [{ id: 1, uuid: "u1", content: "Block one with enough content", page: { id: 10 }, parent: { id: 10 } }],
+        [{ id: 2, uuid: "u2", content: "Block two with enough content", page: { id: 10 }, parent: { id: 10 } }],
+      ],
+      [[defaultPage]],
+    );
 
     mockEmbedTexts.mockResolvedValue([[0.1], [0.2]]);
 
@@ -128,9 +141,12 @@ describe("indexBlocks", () => {
   });
 
   it("clears embeddings on model change", async () => {
-    mockLogseq.DB.datascriptQuery.mockResolvedValue([
+    const blocks = [
       [{ id: 1, uuid: "u1", content: "Hello world this is a test block", page: { id: 10 }, parent: { id: 10 } }],
-    ]);
+    ];
+    const pages = [[defaultPage]];
+
+    mockQueries(blocks, pages);
     mockEmbedTexts.mockResolvedValue([[0.1, 0.2]]);
 
     await indexBlocks();
@@ -140,6 +156,7 @@ describe("indexBlocks", () => {
     // Simulate model change via stored metadata
     await setMetadata("model", "different-model");
 
+    mockQueries(blocks, pages);
     mockEmbedTexts.mockClear();
     mockEmbedTexts.mockResolvedValue([[0.3, 0.4]]);
 
@@ -149,60 +166,113 @@ describe("indexBlocks", () => {
 
   it("embeds with page and ancestor context", async () => {
     // Block 5 is child of block 4, which is a top-level block on page 10
-    mockLogseq.DB.datascriptQuery.mockResolvedValue([
-      [{ id: 5, uuid: "u5", content: "Discussed timeline and budget", page: { id: 10 }, parent: { id: 4 } }],
-    ]);
-
-    mockGetPage.mockResolvedValue({
+    const meetingPage = {
+      id: 10,
+      name: "meeting-notes",
       originalName: "Meeting Notes",
       properties: { tags: ["project-x", "planning"] },
-    });
+    };
 
-    mockGetBlock.mockImplementation(async (id: number) => {
-      if (id === 4) return { id: 4, content: "## Project X Updates", parent: { id: 10 } };
-      return null;
-    });
+    mockQueries(
+      [
+        [{ id: 4, uuid: "u4", content: "## Project X Updates", page: { id: 10 }, parent: { id: 10 } }],
+        [{ id: 5, uuid: "u5", content: "Discussed timeline and budget", page: { id: 10 }, parent: { id: 4 } }],
+      ],
+      [[meetingPage]],
+    );
 
-    mockEmbedTexts.mockResolvedValue([[0.1, 0.2, 0.3]]);
+    mockEmbedTexts.mockResolvedValue([[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]]);
 
     await indexBlocks();
 
     expect(mockEmbedTexts).toHaveBeenCalledTimes(1);
-    const embeddedText = mockEmbedTexts.mock.calls[0][0][0];
-    expect(embeddedText).toContain("[Page: Meeting Notes]");
-    expect(embeddedText).toContain("[tags: project-x, planning]");
-    expect(embeddedText).toContain("> Project X Updates");
-    expect(embeddedText).toContain("Discussed timeline and budget");
+    const call = mockEmbedTexts.mock.calls[0];
+    const texts = call[0];
+
+    // Find the child block's embedding text
+    const childText = texts.find((t: string) => t.includes("Discussed timeline and budget"));
+    expect(childText).toBeDefined();
+    expect(childText).toContain("[Page: Meeting Notes]");
+    expect(childText).toContain("[tags: project-x, planning]");
+    expect(childText).toContain("> Project X Updates");
+    expect(childText).toContain("Discussed timeline and budget");
   });
 
-  it("caches page and parent lookups across blocks", async () => {
-    // Two sibling blocks under the same parent on the same page
-    mockLogseq.DB.datascriptQuery.mockResolvedValue([
-      [{ id: 5, uuid: "u5", content: "First sibling block content", page: { id: 10 }, parent: { id: 4 } }],
-      [{ id: 6, uuid: "u6", content: "Second sibling block content", page: { id: 10 }, parent: { id: 4 } }],
-    ]);
+  it("re-embeds when page is renamed", async () => {
+    const blocks = [
+      [{ id: 1, uuid: "u1", content: "Hello world this is a test block", page: { id: 10 }, parent: { id: 10 } }],
+    ];
 
-    mockGetPage.mockResolvedValue({ originalName: "Page", properties: {} });
-    mockGetBlock.mockImplementation(async (id: number) => {
-      if (id === 4) return { id: 4, content: "Parent block", parent: { id: 10 } };
-      return null;
-    });
+    mockQueries(blocks, [[{ id: 10, name: "old-name", originalName: "Old Name", properties: {} }]]);
+    mockEmbedTexts.mockResolvedValue([[0.1, 0.2, 0.3]]);
 
+    await indexBlocks();
+    expect(mockEmbedTexts).toHaveBeenCalledTimes(1);
+
+    // Same block, but page renamed
+    mockEmbedTexts.mockClear();
+    mockQueries(blocks, [[{ id: 10, name: "new-name", originalName: "New Name", properties: {} }]]);
+    mockEmbedTexts.mockResolvedValue([[0.4, 0.5, 0.6]]);
+
+    await indexBlocks();
+    expect(mockEmbedTexts).toHaveBeenCalledTimes(1);
+  });
+
+  it("re-embeds when parent block changes", async () => {
+    const pages = [[defaultPage]];
+
+    // Initial: block 5 is child of block 4
+    mockQueries(
+      [
+        [{ id: 4, uuid: "u4", content: "Original parent content here", page: { id: 10 }, parent: { id: 10 } }],
+        [{ id: 5, uuid: "u5", content: "Child block content unchanged", page: { id: 10 }, parent: { id: 4 } }],
+      ],
+      pages,
+    );
     mockEmbedTexts.mockResolvedValue([[0.1], [0.2]]);
 
     await indexBlocks();
+    expect(mockEmbedTexts).toHaveBeenCalledTimes(1);
 
-    // getPage should be called once (cached for second block)
-    expect(mockGetPage).toHaveBeenCalledTimes(1);
-    // getBlock(4) called twice: once to get content (cached), once more for parent pointer on second block
-    // But content is cached so the parent walk still needs the block for the parent pointer
-    expect(mockGetBlock).toHaveBeenCalledWith(4);
+    // Parent content changes, child stays the same
+    mockEmbedTexts.mockClear();
+    mockQueries(
+      [
+        [{ id: 4, uuid: "u4", content: "Updated parent content here", page: { id: 10 }, parent: { id: 10 } }],
+        [{ id: 5, uuid: "u5", content: "Child block content unchanged", page: { id: 10 }, parent: { id: 4 } }],
+      ],
+      pages,
+    );
+    mockEmbedTexts.mockResolvedValue([[0.3], [0.4]]);
+
+    await indexBlocks();
+    // Both parent and child should be re-embedded
+    expect(mockEmbedTexts).toHaveBeenCalledTimes(1);
+    const texts = mockEmbedTexts.mock.calls[0][0];
+    expect(texts).toHaveLength(2);
+  });
+
+  it("stores contextHashes in embedding records", async () => {
+    mockQueries(
+      [[{ id: 1, uuid: "u1", content: "Hello world this is a test block", page: { id: 10 }, parent: { id: 10 } }]],
+      [[defaultPage]],
+    );
+    mockEmbedTexts.mockResolvedValue([[0.1, 0.2, 0.3]]);
+
+    await indexBlocks();
+
+    const stored = await getAllEmbeddings();
+    expect(stored).toHaveLength(1);
+    expect(stored[0].contextHashes).toBeDefined();
+    expect(Array.isArray(stored[0].contextHashes)).toBe(true);
+    expect(stored[0].contextHashes.length).toBeGreaterThan(0);
   });
 
   it("handles cancellation", async () => {
-    mockLogseq.DB.datascriptQuery.mockResolvedValue([
-      [{ id: 1, uuid: "u1", content: "Block one with enough content", page: { id: 10 }, parent: { id: 10 } }],
-    ]);
+    mockQueries(
+      [[{ id: 1, uuid: "u1", content: "Block one with enough content", page: { id: 10 }, parent: { id: 10 } }]],
+      [[defaultPage]],
+    );
 
     mockEmbedTexts.mockImplementation(async () => {
       cancelIndexing();

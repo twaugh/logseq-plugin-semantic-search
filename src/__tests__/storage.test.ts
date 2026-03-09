@@ -25,7 +25,7 @@ describe("embeddings CRUD", () => {
   it("stores and retrieves embeddings", async () => {
     const record = {
       blockId: "uuid-1",
-      contentHash: "abc123",
+      contextHashes: ["h1", "h2"],
       embedding: [0.1, 0.2, 0.3],
       pageId: 1,
       timestamp: Date.now(),
@@ -33,7 +33,7 @@ describe("embeddings CRUD", () => {
     await putEmbeddings([record]);
     const result = await getEmbedding("uuid-1");
     expect(result).toBeDefined();
-    expect(result!.contentHash).toBe("abc123");
+    expect(result!.contextHashes).toEqual(["h1", "h2"]);
     expect(result!.embedding).toEqual([0.1, 0.2, 0.3]);
   });
 
@@ -44,8 +44,8 @@ describe("embeddings CRUD", () => {
 
   it("gets all embeddings", async () => {
     await putEmbeddings([
-      { blockId: "a", contentHash: "h1", embedding: [1], pageId: 1, timestamp: 0 },
-      { blockId: "b", contentHash: "h2", embedding: [2], pageId: 1, timestamp: 0 },
+      { blockId: "a", contextHashes: ["h1"], embedding: [1], pageId: 1, timestamp: 0 },
+      { blockId: "b", contextHashes: ["h2"], embedding: [2], pageId: 1, timestamp: 0 },
     ]);
     const all = await getAllEmbeddings();
     expect(all).toHaveLength(2);
@@ -53,8 +53,8 @@ describe("embeddings CRUD", () => {
 
   it("deletes specific embeddings", async () => {
     await putEmbeddings([
-      { blockId: "a", contentHash: "h1", embedding: [1], pageId: 1, timestamp: 0 },
-      { blockId: "b", contentHash: "h2", embedding: [2], pageId: 1, timestamp: 0 },
+      { blockId: "a", contextHashes: ["h1"], embedding: [1], pageId: 1, timestamp: 0 },
+      { blockId: "b", contextHashes: ["h2"], embedding: [2], pageId: 1, timestamp: 0 },
     ]);
     await deleteEmbeddings(["a"]);
     const all = await getAllEmbeddings();
@@ -64,7 +64,7 @@ describe("embeddings CRUD", () => {
 
   it("clears all embeddings", async () => {
     await putEmbeddings([
-      { blockId: "a", contentHash: "h1", embedding: [1], pageId: 1, timestamp: 0 },
+      { blockId: "a", contextHashes: ["h1"], embedding: [1], pageId: 1, timestamp: 0 },
     ]);
     await clearAllEmbeddings();
     const count = await getEmbeddingCount();
@@ -73,9 +73,9 @@ describe("embeddings CRUD", () => {
 
   it("counts embeddings", async () => {
     await putEmbeddings([
-      { blockId: "a", contentHash: "h1", embedding: [1], pageId: 1, timestamp: 0 },
-      { blockId: "b", contentHash: "h2", embedding: [2], pageId: 1, timestamp: 0 },
-      { blockId: "c", contentHash: "h3", embedding: [3], pageId: 2, timestamp: 0 },
+      { blockId: "a", contextHashes: ["h1"], embedding: [1], pageId: 1, timestamp: 0 },
+      { blockId: "b", contextHashes: ["h2"], embedding: [2], pageId: 1, timestamp: 0 },
+      { blockId: "c", contextHashes: ["h3"], embedding: [3], pageId: 2, timestamp: 0 },
     ]);
     expect(await getEmbeddingCount()).toBe(3);
   });
