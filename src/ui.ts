@@ -76,6 +76,17 @@ export function createSearchModal(): void {
 
   document.addEventListener("keydown", handleKeydown);
 
+  const resultsContainer = document.getElementById("ss-results")!;
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Shift") resultsContainer.classList.add("shift-held");
+  });
+  document.addEventListener("keyup", (e) => {
+    if (e.key === "Shift") resultsContainer.classList.remove("shift-held");
+  });
+  window.addEventListener("blur", () => {
+    resultsContainer.classList.remove("shift-held");
+  });
+
   updateStatus();
 }
 
@@ -108,7 +119,9 @@ function handleKeydown(e: KeyboardEvent): void {
     items[index].scrollIntoView({ block: "nearest" });
   } else if (e.key === "Enter" && active) {
     e.preventDefault();
-    (active as HTMLElement).click();
+    (active as HTMLElement).dispatchEvent(
+      new MouseEvent("click", { shiftKey: e.shiftKey, bubbles: true }),
+    );
   }
 }
 
@@ -270,7 +283,15 @@ function renderResults(results: DisplayResult[]): void {
       <div class="ss-result-content">${escapeHtml(preview)}</div>
     `;
 
-    item.addEventListener("click", async () => {
+    item.addEventListener("click", async (e) => {
+      if (e.shiftKey) {
+        try {
+          logseq.Editor.openInRightSidebar(result.blockId);
+        } catch {
+          // ignore sidebar errors
+        }
+        return;
+      }
       try {
         const block = await logseq.Editor.getBlock(result.blockId);
         if (block?.page?.id) {

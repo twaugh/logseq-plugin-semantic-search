@@ -93,6 +93,10 @@
   border-color: var(--ls-border-color, #e0e0e0);
 }
 
+.shift-held .ss-result-item {
+  cursor: e-resize;
+}
+
 .ss-result-header {
   display: flex;
   align-items: center;
