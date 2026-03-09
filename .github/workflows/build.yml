@@ -31,7 +31,7 @@ jobs:
     - name: Create release package
       run: |
         mkdir -p release
-        cp -r dist/* release/
+        cp -r dist release/
         cp package.json release/
         cp README.md release/
         cp -r icon.png release/ 2>/dev/null || true
