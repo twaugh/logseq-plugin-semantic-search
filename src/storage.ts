@@ -16,7 +16,7 @@ function getDBName(): string {
 
 export interface EmbeddingRecord {
   blockId: string;
-  contentHash: string;
+  contextHashes: string[];
   embedding: number[];
   pageId: number;
   timestamp: number;
