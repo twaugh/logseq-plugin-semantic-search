@@ -41,6 +41,16 @@ The **Include journal** checkbox in the footer controls whether results from jou
 
 Click **Re-index** to rebuild the embedding index. By default, blocks are automatically indexed when the graph loads and only changed blocks are re-embedded on subsequent runs.
 
+### Search tips
+
+Semantic search matches meaning, not exact words. To get the best results:
+
+- **Use natural language**: instead of `auth migration flag`, try `gradually rolling out the new authentication system`.
+- **Describe what you're looking for**: `notes about debugging memory leaks` finds blocks about memory issues even if they never use the word "debugging".
+- **Ask questions**: `why did we choose PostgreSQL?` works well when your notes contain the reasoning.
+- **Be specific**: `meeting where we discussed the Q1 budget timeline` ranks better than just `meeting notes`.
+- **Don't worry about exact phrasing**: synonyms like `cost`, `expense`, and `budget` all surface similar blocks.
+
 ## Settings
 
 | Setting | Default | Description |
