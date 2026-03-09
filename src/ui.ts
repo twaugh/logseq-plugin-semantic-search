@@ -123,10 +123,21 @@ async function updateStatus(): Promise<void> {
   const statusEl = document.getElementById("ss-status");
   if (!statusEl) return;
 
+  if (indexingState.status === "scanning") {
+    statusEl.textContent = "Scanning for changes...";
+    return;
+  }
+
   if (indexingState.status === "indexing") {
     const { done, total } = indexingState.progress;
     statusEl.textContent = `Indexing... ${done}/${total}`;
     return;
+  }
+
+  // idle — stop polling
+  if (progressInterval) {
+    clearInterval(progressInterval);
+    progressInterval = undefined;
   }
 
   try {
@@ -299,7 +310,11 @@ function escapeHtml(text: string): string {
 
 export function showModal(): void {
   logseq.showMainUI();
-  startIndexing();
+  if (indexingState.status === "idle") {
+    startIndexing();
+  } else {
+    startStatusPolling();
+  }
   setTimeout(() => {
     const input = document.getElementById("ss-input") as HTMLInputElement;
     if (input) {
@@ -313,10 +328,7 @@ export function showModal(): void {
 function startIndexing(): void {
   updateStatus();
   startStatusPolling();
-  indexBlocks((done, total) => {
-    const statusEl = document.getElementById("ss-status");
-    if (statusEl) statusEl.textContent = `Indexing... ${done}/${total}`;
-  })
+  indexBlocks()
     .then(() => updateStatus())
     .catch(() => updateStatus());
 }

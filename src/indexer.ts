@@ -13,7 +13,7 @@ import {
 import { getSettings } from "./settings";
 
 export interface IndexingState {
-  status: "idle" | "indexing";
+  status: "idle" | "scanning" | "indexing";
   progress: { done: number; total: number };
 }
 
@@ -172,6 +172,7 @@ export function cancelIndexing(): void {
   if (currentAbort) {
     currentAbort.abort();
     currentAbort = null;
+    indexingState.status = "idle";
   }
 }
 
@@ -242,8 +243,8 @@ export async function indexBlocks(
       });
     }
 
-    indexingState.status = "indexing";
-    indexingState.progress = { done: 0, total: indexableBlocks.length };
+    indexingState.status = "scanning";
+    indexingState.progress = { done: 0, total: 0 };
 
     // Find blocks needing embedding
     const toEmbed: {
@@ -279,6 +280,11 @@ export async function indexBlocks(
     // Batch embed
     const total = toEmbed.length;
     let done = 0;
+
+    if (total > 0) {
+      indexingState.status = "indexing";
+      indexingState.progress = { done: 0, total };
+    }
 
     for (let i = 0; i < toEmbed.length; i += settings.batchSize) {
       if (abort.signal.aborted) return;
@@ -334,8 +340,8 @@ export async function indexBlocks(
     logseq.UI.showMsg(msg, "error");
     throw err;
   } finally {
-    indexingState.status = "idle";
     if (currentAbort === abort) {
+      indexingState.status = "idle";
       currentAbort = null;
     }
   }
