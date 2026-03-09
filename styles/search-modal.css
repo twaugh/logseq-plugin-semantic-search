@@ -107,9 +107,17 @@
   min-width: 36px;
 }
 
-.ss-page-name {
-  font-size: 13px;
+.ss-breadcrumbs {
+  font-size: 12px;
   color: var(--ls-secondary-text-color, #999);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ss-breadcrumb-sep {
+  margin: 0 4px;
+  opacity: 0.6;
 }
 
 .ss-result-content {

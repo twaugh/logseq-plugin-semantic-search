@@ -9,6 +9,7 @@ interface DisplayResult extends SearchResult {
   pageName: string;
   content: string;
   isJournal: boolean;
+  breadcrumbs: string[];
 }
 
 let progressInterval: ReturnType<typeof setInterval> | undefined;
@@ -179,11 +180,38 @@ async function performSearch(query: string): Promise<void> {
           isJournal = page?.["journal?"] ?? false;
         }
 
+        // Build breadcrumbs by walking up parent chain via datascript
+        const breadcrumbs: string[] = [pageName];
+        const ancestors: string[] = [];
+        let childUuid = result.blockId;
+        while (childUuid) {
+          try {
+            const rows: [string, string][] = await logseq.DB.datascriptQuery(
+              `[:find ?content ?uuid
+                :where [?child :block/uuid #uuid "${childUuid}"]
+                       [?child :block/parent ?parent]
+                       [?parent :block/content ?content]
+                       [?parent :block/uuid ?uuid]
+                       (not [?parent :block/name _])]`,
+            );
+            if (!rows?.[0]) break;
+            const [content, parentUuid] = rows[0];
+            const firstLine = content.split("\n")[0];
+            const truncated = firstLine.length > 50;
+            ancestors.unshift(truncated ? firstLine.slice(0, 50) + "..." : firstLine);
+            childUuid = parentUuid;
+          } catch {
+            break;
+          }
+        }
+        breadcrumbs.push(...ancestors);
+
         displayResults.push({
           ...result,
           pageName,
           content: block.content ?? "",
           isJournal,
+          breadcrumbs,
         });
       } catch {
         // Skip blocks we can't fetch
@@ -217,10 +245,14 @@ function renderResults(results: DisplayResult[]): void {
         ? result.content.slice(0, 150) + "..."
         : result.content;
 
+    const breadcrumbHtml = result.breadcrumbs
+      .map((b) => `<span class="ss-breadcrumb-segment">${escapeHtml(b)}</span>`)
+      .join('<span class="ss-breadcrumb-sep">›</span>');
+
     item.innerHTML = `
       <div class="ss-result-header">
         <span class="ss-similarity">${similarity}%</span>
-        <span class="ss-page-name">${escapeHtml(result.pageName)}</span>
+        <span class="ss-breadcrumbs">${breadcrumbHtml}</span>
       </div>
       <div class="ss-result-content">${escapeHtml(preview)}</div>
     `;
