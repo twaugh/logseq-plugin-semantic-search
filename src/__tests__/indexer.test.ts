@@ -35,7 +35,7 @@ vi.mock("../embeddings", () => ({
 
 import { indexBlocks, indexingState, cancelIndexing } from "../indexer";
 import { embedTexts } from "../embeddings";
-import { getAllEmbeddings, setMetadata } from "../storage";
+import { getAllEmbeddings, setMetadata, setGraphName } from "../storage";
 
 const mockEmbedTexts = vi.mocked(embedTexts);
 
@@ -43,6 +43,7 @@ beforeEach(async () => {
   vi.clearAllMocks();
   indexingState.status = "idle";
   indexingState.progress = { done: 0, total: 0 };
+  setGraphName("test-graph");
 
   // Default: getPage returns a simple page, getBlock returns null (no parent chain)
   mockGetPage.mockResolvedValue({ originalName: "Test Page", properties: {} });
