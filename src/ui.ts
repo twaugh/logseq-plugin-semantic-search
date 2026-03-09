@@ -131,9 +131,9 @@ async function updateStatus(): Promise<void> {
   try {
     const count = await getEmbeddingCount();
     statusEl.textContent =
-      count > 0 ? `${count} blocks indexed` : "No blocks indexed. Click Re-index to start.";
+      count > 0 ? `${count} blocks indexed` : "No blocks indexed";
   } catch {
-    statusEl.textContent = "No blocks indexed. Click Re-index to start.";
+    statusEl.textContent = "No blocks indexed";
   }
 }
 
@@ -267,8 +267,7 @@ function escapeHtml(text: string): string {
 
 export function showModal(): void {
   logseq.showMainUI();
-  updateStatus();
-  startStatusPolling();
+  startIndexing();
   setTimeout(() => {
     const input = document.getElementById("ss-input") as HTMLInputElement;
     if (input) {
