@@ -28,10 +28,7 @@ Do that here: **Settings > Advanced > Developer Mode**
 
 ## Usage
 
-Open the search modal with any of:
-
-- **Alt+K** keyboard shortcut
-- Toolbar search icon
+Open the search modal with either the **Alt+K** keyboard shortcut or the toolbar search icon.
 
 ![Demo](docs/demo.gif)
 
