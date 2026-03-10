@@ -13,6 +13,13 @@ An embedding API server. Either:
 
 ## Installation
 
+### From the Logseq Marketplace
+
+1. In Logseq, go to **Plugins → Marketplace**
+2. Search for "Semantic Search" and click **Install**
+
+### From source
+
 1. Build the plugin:
 
 ```sh
@@ -20,7 +27,7 @@ npm install
 npm run build
 ```
 
-2. In Logseq, enable Developer Mode so you can load plugins from a directory. 
+2. In Logseq, enable Developer Mode so you can load plugins from a directory.
 
 Do that here: **Settings > Advanced > Developer Mode**
 
