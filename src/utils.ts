@@ -54,6 +54,7 @@ const SKIP_PROPERTIES = new Set([
 export function formatPageProperties(props: Record<string, any>): string {
   const entries = Object.entries(props)
     .filter(([k]) => !SKIP_PROPERTIES.has(k))
+    .sort(([a], [b]) => a.localeCompare(b))
     .map(([k, v]) => {
       const val = Array.isArray(v) ? v.join(", ") : String(v);
       return `${k}: ${val}`;
