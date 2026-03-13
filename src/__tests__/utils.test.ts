@@ -66,7 +66,7 @@ describe("hashContent", () => {
 describe("formatPageProperties", () => {
   it("formats simple properties", () => {
     expect(formatPageProperties({ tags: "meeting", category: "work" })).toBe(
-      "[tags: meeting, category: work]",
+      "[category: work, tags: meeting]",
     );
   });
 
