@@ -24,6 +24,32 @@ export const indexingState: IndexingState = {
 
 let currentAbort: AbortController | null = null;
 
+let searchResolve: (() => void) | null = null;
+let searchPromise: Promise<void> | null = null;
+let batchAbort: AbortController | null = null;
+
+export function acquireSearchPriority(): void {
+  if (!searchPromise) {
+    searchPromise = new Promise((r) => { searchResolve = r; });
+  }
+  // Abort any in-flight indexing batch so the API is free for search
+  if (batchAbort) {
+    batchAbort.abort();
+  }
+}
+
+export function releaseSearchPriority(): void {
+  if (searchResolve) {
+    searchResolve();
+    searchPromise = null;
+    searchResolve = null;
+  }
+}
+
+async function waitForSearch(): Promise<void> {
+  if (searchPromise) await searchPromise;
+}
+
 interface BlockResult {
   id: number;
   uuid: string;
@@ -183,6 +209,8 @@ export async function indexBlocks(
 
   const abort = new AbortController();
   currentAbort = abort;
+  indexingState.status = "scanning";
+  indexingState.progress = { done: 0, total: 0 };
 
   const settings = getSettings();
 
@@ -243,9 +271,6 @@ export async function indexBlocks(
       });
     }
 
-    indexingState.status = "scanning";
-    indexingState.progress = { done: 0, total: 0 };
-
     // Find blocks needing embedding
     const toEmbed: {
       blockId: string;
@@ -289,16 +314,39 @@ export async function indexBlocks(
     for (let i = 0; i < toEmbed.length; i += settings.batchSize) {
       if (abort.signal.aborted) return;
 
+      await waitForSearch();
+      if (abort.signal.aborted) return;
+
       const batch = toEmbed.slice(i, i + settings.batchSize);
       const texts = batch.map((b) => b.content);
 
-      const embeddings = await embedTexts(
-        texts,
-        settings.apiEndpoint,
-        settings.embeddingModel,
-        settings.apiFormat,
-        abort.signal,
-      );
+      // Create a per-batch abort controller that search can cancel
+      batchAbort = new AbortController();
+      const onMainAbort = () => batchAbort?.abort();
+      abort.signal.addEventListener("abort", onMainAbort);
+
+      let embeddings: number[][];
+      try {
+        embeddings = await embedTexts(
+          texts,
+          settings.apiEndpoint,
+          settings.embeddingModel,
+          settings.apiFormat,
+          batchAbort.signal,
+        );
+      } catch (err) {
+        abort.signal.removeEventListener("abort", onMainAbort);
+        batchAbort = null;
+        if (abort.signal.aborted) return;
+        // Batch was aborted by search priority — retry this batch
+        if ((err as Error).name === "AbortError") {
+          i -= settings.batchSize;
+          continue;
+        }
+        throw err;
+      }
+      abort.signal.removeEventListener("abort", onMainAbort);
+      batchAbort = null;
 
       const records = batch.map((b, j) => ({
         blockId: b.blockId,

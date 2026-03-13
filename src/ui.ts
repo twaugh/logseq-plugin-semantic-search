@@ -2,7 +2,7 @@ import { debounce } from "./utils";
 import { embedTexts } from "./embeddings";
 import { getAllEmbeddings, getEmbeddingCount } from "./storage";
 import { searchEmbeddings, type SearchResult } from "./search";
-import { indexBlocks, indexingState } from "./indexer";
+import { indexBlocks, indexingState, acquireSearchPriority, releaseSearchPriority } from "./indexer";
 import { getSettings } from "./settings";
 
 interface DisplayResult extends SearchResult {
@@ -235,12 +235,18 @@ async function performSearch(query: string): Promise<void> {
 
   try {
     const settings = getSettings();
-    const [queryEmbedding] = await embedTexts(
-      [query],
-      settings.apiEndpoint,
-      settings.embeddingModel,
-      settings.apiFormat,
-    );
+    acquireSearchPriority();
+    let queryEmbedding: number[];
+    try {
+      [queryEmbedding] = await embedTexts(
+        [query],
+        settings.apiEndpoint,
+        settings.embeddingModel,
+        settings.apiFormat,
+      );
+    } finally {
+      releaseSearchPriority();
+    }
 
     const allEmbeddings = await getAllEmbeddings();
     const results = searchEmbeddings(
