@@ -11,6 +11,28 @@ An embedding API server. Either:
 - **[Ollama](https://ollama.com/)** (default) — run locally with `ollama pull nomic-embed-text`
 - Any **OpenAI-compatible** embedding API
 
+### Running Ollama with Podman
+
+If you prefer not to install Ollama directly, you can run it in a container:
+
+```sh
+podman run -d \
+  --name ollama \
+  -p 11434:11434 \
+  -e OLLAMA_ORIGINS='*' \
+  -v ollama:/root/.ollama \
+  docker.io/ollama/ollama
+
+# Pull the embedding model
+podman exec ollama ollama pull nomic-embed-text
+```
+
+The container persists the model data in a named volume (`ollama`) so you won't need to re-download the model after restarts. To start it again later:
+
+```sh
+podman start ollama
+```
+
 ## Installation
 
 ### From the Logseq Marketplace
