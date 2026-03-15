@@ -171,6 +171,10 @@ function handleKeydown(e: KeyboardEvent): void {
     (active as HTMLElement).dispatchEvent(
       new MouseEvent("click", { shiftKey: e.shiftKey, bubbles: true }),
     );
+  } else if (e.key === "c" && (e.ctrlKey || e.metaKey) && active) {
+    e.preventDefault();
+    const blockId = active.getAttribute("data-block-id");
+    if (blockId) copyBlockReference(blockId);
   }
 }
 
@@ -328,6 +332,7 @@ function renderResults(results: DisplayResult[]): void {
   for (const result of results) {
     const item = document.createElement("div");
     item.className = "ss-result-item";
+    item.setAttribute("data-block-id", result.blockId);
 
     const similarity = Math.round(result.similarity * 100);
     const preview =
@@ -345,7 +350,14 @@ function renderResults(results: DisplayResult[]): void {
         <span class="ss-breadcrumbs">${breadcrumbHtml}</span>
       </div>
       <div class="ss-result-content">${escapeHtml(preview)}</div>
+      <button class="ss-ref-btn" title="Copy block reference (Ctrl+C)">((&nbsp;))</button>
     `;
+
+    const refBtn = item.querySelector(".ss-ref-btn")!;
+    refBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      copyBlockReference(result.blockId);
+    });
 
     item.addEventListener("click", async (e) => {
       if (e.shiftKey) {
@@ -387,6 +399,12 @@ function clearResults(): void {
   const resultsEl = document.getElementById("ss-results");
   if (resultsEl) resultsEl.innerHTML = "";
   lastDisplayResults = [];
+}
+
+function copyBlockReference(blockId: string): void {
+  navigator.clipboard.writeText(`((${blockId}))`).then(() => {
+    logseq.UI.showMsg("Block reference copied to clipboard");
+  });
 }
 
 function escapeHtml(text: string): string {

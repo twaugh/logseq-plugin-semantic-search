@@ -80,11 +80,38 @@
 }
 
 .ss-result-item {
+  position: relative;
   padding: 10px 12px;
   border-radius: 4px;
   cursor: pointer;
   margin-bottom: 4px;
   border: 1px solid transparent;
+}
+
+.ss-ref-btn {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: var(--ls-secondary-background-color, #f7f7f7);
+  border: 1px solid var(--ls-border-color, #e0e0e0);
+  border-radius: 4px;
+  color: var(--ls-secondary-text-color, #999);
+  cursor: pointer;
+  font-size: 12px;
+  padding: 2px 6px;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.ss-result-item:hover .ss-ref-btn,
+.ss-result-item.active .ss-ref-btn {
+  opacity: 1;
+}
+
+.ss-ref-btn:hover {
+  background: var(--ls-tertiary-background-color, #eee);
+  color: var(--ls-link-text-color, #4a9eff);
 }
 
 .ss-result-item:hover,
