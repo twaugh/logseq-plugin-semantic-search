@@ -1,7 +1,7 @@
 import { normalizeContent, truncate, formatPageProperties } from "./utils";
 import { embedTexts } from "./embeddings";
 import {
-  getEmbedding,
+  type EmbeddingRecord,
   putEmbeddings,
   getAllEmbeddings,
   deleteEmbeddings,
@@ -268,6 +268,13 @@ export async function indexBlocks(
       });
     }
 
+    // Bulk-load existing embeddings for fast lookups
+    const allExisting = await getAllEmbeddings();
+    const existingMap = new Map<string, EmbeddingRecord>();
+    for (const rec of allExisting) {
+      existingMap.set(rec.blockId, rec);
+    }
+
     // Find blocks needing embedding
     const toEmbed: {
       blockId: string;
@@ -286,7 +293,7 @@ export async function indexBlocks(
       currentBlockIds.add(blockId);
 
       const contextHashes = buildContextHashes(block.id, blockMap, pageMap, hashCache);
-      const existing = await getEmbedding(blockId);
+      const existing = existingMap.get(blockId);
 
       if (!existing || !existing.contextHashes || !contextHashesEqual(existing.contextHashes, contextHashes)) {
         const embeddingText = buildEmbeddingText(block.id, blockMap, pageMap);
@@ -364,8 +371,7 @@ export async function indexBlocks(
     }
 
     // Delete stale entries
-    const allStored = await getAllEmbeddings();
-    const staleIds = allStored
+    const staleIds = allExisting
       .map((r) => r.blockId)
       .filter((id) => !currentBlockIds.has(id));
     if (staleIds.length > 0) {
