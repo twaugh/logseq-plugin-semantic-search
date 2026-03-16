@@ -40,7 +40,7 @@ function mockQueries(blocks: any[][], pages: any[][]) {
     .mockResolvedValueOnce(pages);   // page query
 }
 
-const defaultPage = { id: 10, name: "test-page", originalName: "Test Page", properties: {} };
+const defaultPage = { id: 10, name: "test-page", originalName: "Test Page", properties: {}, "updated-at": 1000 };
 
 beforeEach(async () => {
   vi.clearAllMocks();
@@ -58,7 +58,7 @@ beforeEach(async () => {
 describe("indexBlocks", () => {
   it("skips unchanged blocks", async () => {
     const blocks = [
-      [{ id: 1, uuid: "u1", content: "Hello world this is a test block", page: { id: 10 }, parent: { id: 10 } }],
+      [{ id: 1, uuid: "u1", content: "Hello world this is a test block", page: { id: 10 }, parent: { id: 10 }, "updated-at": 1000 }],
     ];
     const pages = [[defaultPage]];
 
@@ -69,7 +69,7 @@ describe("indexBlocks", () => {
     await indexBlocks();
     expect(mockEmbedTexts).toHaveBeenCalledTimes(1);
 
-    // Second index - same content, should skip
+    // Second index - same timestamps, should skip
     mockEmbedTexts.mockClear();
     mockQueries(blocks, pages);
     await indexBlocks();
@@ -80,16 +80,16 @@ describe("indexBlocks", () => {
     const pages = [[defaultPage]];
 
     mockQueries(
-      [[{ id: 1, uuid: "u1", content: "Hello world this is a test block", page: { id: 10 }, parent: { id: 10 } }]],
+      [[{ id: 1, uuid: "u1", content: "Hello world this is a test block", page: { id: 10 }, parent: { id: 10 }, "updated-at": 1000 }]],
       pages,
     );
     mockEmbedTexts.mockResolvedValue([[0.1, 0.2, 0.3]]);
 
     await indexBlocks();
 
-    // Change content
+    // Change content — updated-at changes
     mockQueries(
-      [[{ id: 1, uuid: "u1", content: "Changed content that is different", page: { id: 10 }, parent: { id: 10 } }]],
+      [[{ id: 1, uuid: "u1", content: "Changed content that is different", page: { id: 10 }, parent: { id: 10 }, "updated-at": 2000 }]],
       pages,
     );
     mockEmbedTexts.mockClear();
@@ -103,11 +103,11 @@ describe("indexBlocks", () => {
     // batchSize is 2
     mockQueries(
       [
-        [{ id: 1, uuid: "u1", content: "First block with enough content", page: { id: 10 }, parent: { id: 10 } }],
-        [{ id: 2, uuid: "u2", content: "Second block with enough content", page: { id: 10 }, parent: { id: 10 } }],
-        [{ id: 3, uuid: "u3", content: "Third block with enough content", page: { id: 11 }, parent: { id: 11 } }],
+        [{ id: 1, uuid: "u1", content: "First block with enough content", page: { id: 10 }, parent: { id: 10 }, "updated-at": 1000 }],
+        [{ id: 2, uuid: "u2", content: "Second block with enough content", page: { id: 10 }, parent: { id: 10 }, "updated-at": 1000 }],
+        [{ id: 3, uuid: "u3", content: "Third block with enough content", page: { id: 11 }, parent: { id: 11 }, "updated-at": 1000 }],
       ],
-      [[defaultPage], [{ id: 11, name: "page-2", originalName: "Page 2", properties: {} }]],
+      [[defaultPage], [{ id: 11, name: "page-2", originalName: "Page 2", properties: {}, "updated-at": 1000 }]],
     );
 
     mockEmbedTexts
@@ -124,8 +124,8 @@ describe("indexBlocks", () => {
   it("tracks progress", async () => {
     mockQueries(
       [
-        [{ id: 1, uuid: "u1", content: "Block one with enough content", page: { id: 10 }, parent: { id: 10 } }],
-        [{ id: 2, uuid: "u2", content: "Block two with enough content", page: { id: 10 }, parent: { id: 10 } }],
+        [{ id: 1, uuid: "u1", content: "Block one with enough content", page: { id: 10 }, parent: { id: 10 }, "updated-at": 1000 }],
+        [{ id: 2, uuid: "u2", content: "Block two with enough content", page: { id: 10 }, parent: { id: 10 }, "updated-at": 1000 }],
       ],
       [[defaultPage]],
     );
@@ -141,7 +141,7 @@ describe("indexBlocks", () => {
 
   it("clears embeddings on model change", async () => {
     const blocks = [
-      [{ id: 1, uuid: "u1", content: "Hello world this is a test block", page: { id: 10 }, parent: { id: 10 } }],
+      [{ id: 1, uuid: "u1", content: "Hello world this is a test block", page: { id: 10 }, parent: { id: 10 }, "updated-at": 1000 }],
     ];
     const pages = [[defaultPage]];
 
@@ -170,12 +170,13 @@ describe("indexBlocks", () => {
       name: "meeting-notes",
       originalName: "Meeting Notes",
       properties: { tags: ["project-x", "planning"] },
+      "updated-at": 1000,
     };
 
     mockQueries(
       [
-        [{ id: 4, uuid: "u4", content: "## Project X Updates", page: { id: 10 }, parent: { id: 10 } }],
-        [{ id: 5, uuid: "u5", content: "Discussed timeline and budget", page: { id: 10 }, parent: { id: 4 } }],
+        [{ id: 4, uuid: "u4", content: "## Project X Updates", page: { id: 10 }, parent: { id: 10 }, "updated-at": 1000 }],
+        [{ id: 5, uuid: "u5", content: "Discussed timeline and budget", page: { id: 10 }, parent: { id: 4 }, "updated-at": 1000 }],
       ],
       [[meetingPage]],
     );
@@ -199,18 +200,18 @@ describe("indexBlocks", () => {
 
   it("re-embeds when page is renamed", async () => {
     const blocks = [
-      [{ id: 1, uuid: "u1", content: "Hello world this is a test block", page: { id: 10 }, parent: { id: 10 } }],
+      [{ id: 1, uuid: "u1", content: "Hello world this is a test block", page: { id: 10 }, parent: { id: 10 }, "updated-at": 1000 }],
     ];
 
-    mockQueries(blocks, [[{ id: 10, name: "old-name", originalName: "Old Name", properties: {} }]]);
+    mockQueries(blocks, [[{ id: 10, name: "old-name", originalName: "Old Name", properties: {}, "updated-at": 1000 }]]);
     mockEmbedTexts.mockResolvedValue([[0.1, 0.2, 0.3]]);
 
     await indexBlocks();
     expect(mockEmbedTexts).toHaveBeenCalledTimes(1);
 
-    // Same block, but page renamed
+    // Same block, but page renamed — page updated-at changes
     mockEmbedTexts.mockClear();
-    mockQueries(blocks, [[{ id: 10, name: "new-name", originalName: "New Name", properties: {} }]]);
+    mockQueries(blocks, [[{ id: 10, name: "new-name", originalName: "New Name", properties: {}, "updated-at": 2000 }]]);
     mockEmbedTexts.mockResolvedValue([[0.4, 0.5, 0.6]]);
 
     await indexBlocks();
@@ -223,8 +224,8 @@ describe("indexBlocks", () => {
     // Initial: block 5 is child of block 4
     mockQueries(
       [
-        [{ id: 4, uuid: "u4", content: "Original parent content here", page: { id: 10 }, parent: { id: 10 } }],
-        [{ id: 5, uuid: "u5", content: "Child block content unchanged", page: { id: 10 }, parent: { id: 4 } }],
+        [{ id: 4, uuid: "u4", content: "Original parent content here", page: { id: 10 }, parent: { id: 10 }, "updated-at": 1000 }],
+        [{ id: 5, uuid: "u5", content: "Child block content unchanged", page: { id: 10 }, parent: { id: 4 }, "updated-at": 1000 }],
       ],
       pages,
     );
@@ -233,12 +234,12 @@ describe("indexBlocks", () => {
     await indexBlocks();
     expect(mockEmbedTexts).toHaveBeenCalledTimes(1);
 
-    // Parent content changes, child stays the same
+    // Parent content changes (updated-at changes), child stays the same
     mockEmbedTexts.mockClear();
     mockQueries(
       [
-        [{ id: 4, uuid: "u4", content: "Updated parent content here", page: { id: 10 }, parent: { id: 10 } }],
-        [{ id: 5, uuid: "u5", content: "Child block content unchanged", page: { id: 10 }, parent: { id: 4 } }],
+        [{ id: 4, uuid: "u4", content: "Updated parent content here", page: { id: 10 }, parent: { id: 10 }, "updated-at": 2000 }],
+        [{ id: 5, uuid: "u5", content: "Child block content unchanged", page: { id: 10 }, parent: { id: 4 }, "updated-at": 1000 }],
       ],
       pages,
     );
@@ -251,9 +252,9 @@ describe("indexBlocks", () => {
     expect(texts).toHaveLength(2);
   });
 
-  it("stores contextHashes in embedding records", async () => {
+  it("stores timestamps in embedding records", async () => {
     mockQueries(
-      [[{ id: 1, uuid: "u1", content: "Hello world this is a test block", page: { id: 10 }, parent: { id: 10 } }]],
+      [[{ id: 1, uuid: "u1", content: "Hello world this is a test block", page: { id: 10 }, parent: { id: 10 }, "updated-at": 1000 }]],
       [[defaultPage]],
     );
     mockEmbedTexts.mockResolvedValue([[0.1, 0.2, 0.3]]);
@@ -262,14 +263,13 @@ describe("indexBlocks", () => {
 
     const stored = await getAllEmbeddings();
     expect(stored).toHaveLength(1);
-    expect(stored[0].contextHashes).toBeDefined();
-    expect(Array.isArray(stored[0].contextHashes)).toBe(true);
-    expect(stored[0].contextHashes.length).toBeGreaterThan(0);
+    expect(stored[0].blockUpdatedAt).toBe(1000);
+    expect(stored[0].pageUpdatedAt).toBe(1000);
   });
 
   it("handles cancellation", async () => {
     mockQueries(
-      [[{ id: 1, uuid: "u1", content: "Block one with enough content", page: { id: 10 }, parent: { id: 10 } }]],
+      [[{ id: 1, uuid: "u1", content: "Block one with enough content", page: { id: 10 }, parent: { id: 10 }, "updated-at": 1000 }]],
       [[defaultPage]],
     );
 
