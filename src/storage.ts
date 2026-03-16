@@ -16,10 +16,10 @@ function getDBName(): string {
 
 export interface EmbeddingRecord {
   blockId: string;
-  contextHashes: string[];
   embedding: number[];
   pageId: number;
-  timestamp: number;
+  blockUpdatedAt: number;
+  pageUpdatedAt: number;
 }
 
 export interface MetadataRecord {

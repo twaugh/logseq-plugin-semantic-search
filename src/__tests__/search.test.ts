@@ -18,9 +18,9 @@ describe("dotProduct", () => {
 
 describe("searchEmbeddings", () => {
   const records: EmbeddingRecord[] = [
-    { blockId: "a", contextHashes: [], embedding: [1, 0, 0], pageId: 1, timestamp: 0 },
-    { blockId: "b", contextHashes: [], embedding: [0, 1, 0], pageId: 1, timestamp: 0 },
-    { blockId: "c", contextHashes: [], embedding: [0.7, 0.7, 0], pageId: 2, timestamp: 0 },
+    { blockId: "a", embedding: [1, 0, 0], pageId: 1, blockUpdatedAt: 0, pageUpdatedAt: 0 },
+    { blockId: "b", embedding: [0, 1, 0], pageId: 1, blockUpdatedAt: 0, pageUpdatedAt: 0 },
+    { blockId: "c", embedding: [0.7, 0.7, 0], pageId: 2, blockUpdatedAt: 0, pageUpdatedAt: 0 },
   ];
 
   it("returns results sorted by similarity", () => {
