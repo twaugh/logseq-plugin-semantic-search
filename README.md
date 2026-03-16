@@ -61,7 +61,9 @@ Open the search modal with either the **Alt+K** keyboard shortcut or the toolbar
 
 ![Demo](docs/demo.gif)
 
-Type a query and results appear ranked by similarity. Click a result to navigate to that block.
+Type a query and results appear ranked by similarity. Click a result to navigate to that block. **Shift+click** (or **Shift+Enter**) opens the block in the right sidebar instead.
+
+Hover over a result to reveal the **copy** button, or press **Ctrl+C** (**Cmd+C** on Mac) with a result selected, to copy a `((block reference))` to the clipboard.
 
 The **Include journal** checkbox in the footer controls whether results from journal pages are shown.
 
