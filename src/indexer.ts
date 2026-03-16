@@ -254,11 +254,8 @@ export async function indexBlocks(
         parentId: block.parent?.id ?? 0,
         pageId: block.page?.id ?? 0,
       });
-      if (block.uuid && block.content.length >= settings.minBlockLength) {
-        const normalized = normalizeContent(block.content);
-        if (normalized.length >= settings.minBlockLength) {
-          indexableBlocks.push(block);
-        }
+      if (block.uuid) {
+        indexableBlocks.push(block);
       }
     }
 

@@ -8,7 +8,6 @@ const mockLogseq = {
     embeddingModel: "nomic-embed-text",
     batchSize: 2,
     topK: 20,
-    minBlockLength: 10,
     autoIndexOnLoad: true,
   },
   DB: {
