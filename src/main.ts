@@ -2,7 +2,7 @@ import "@logseq/libs";
 import { settingsSchema } from "./settings";
 import { getSettings } from "./settings";
 import { indexBlocks } from "./indexer";
-import { setGraphName, invalidateCache, clearAllEmbeddings } from "./storage";
+import { setGraphName, clearAllEmbeddings } from "./storage";
 import { createSearchModal, showModal } from "./ui";
 
 async function main() {
@@ -45,7 +45,6 @@ async function main() {
   // Register rebuild command
   logseq.App.registerCommandPalette({ key: "rebuild-index", label: "Semantic Search: Rebuild index" }, async () => {
     await clearAllEmbeddings();
-    invalidateCache();
     logseq.UI.showMsg("Rebuilding index...");
     try {
       await indexBlocks();
@@ -73,7 +72,6 @@ async function main() {
 
   // Re-index on graph change
   logseq.App.onCurrentGraphChanged(async () => {
-    invalidateCache();
     const graph = await logseq.App.getCurrentGraph();
     if (graph?.name) setGraphName(graph.name);
     const s = getSettings();
