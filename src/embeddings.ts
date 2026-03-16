@@ -50,17 +50,38 @@ async function fetchWithRetry(
   throw lastError ?? new EmbeddingError("Unknown error");
 }
 
+export type TaskType = "query" | "document";
+
+interface PrefixPair {
+  query: string;
+  document: string;
+}
+
+const MODEL_PREFIXES: [RegExp, PrefixPair][] = [
+  [/\bnomic-embed-text\b/i, { query: "search_query: ", document: "search_document: " }],
+];
+
+function getPrefix(model: string, task: TaskType): string {
+  for (const [pattern, prefixes] of MODEL_PREFIXES) {
+    if (pattern.test(model)) return prefixes[task];
+  }
+  return "";
+}
+
 export async function embedTexts(
   texts: string[],
   endpoint: string,
   model: string,
   format: "ollama" | "openai",
   signal?: AbortSignal,
+  task: TaskType = "document",
 ): Promise<number[][]> {
+  const prefix = getPrefix(model, task);
+  const prefixed = prefix ? texts.map((t) => prefix + t) : texts;
   if (format === "ollama") {
-    return embedOllama(texts, endpoint, model, signal);
+    return embedOllama(prefixed, endpoint, model, signal);
   }
-  return embedOpenAI(texts, endpoint, model, signal);
+  return embedOpenAI(prefixed, endpoint, model, signal);
 }
 
 async function embedOllama(

@@ -28,7 +28,7 @@ describe("embedTexts - ollama format", () => {
         method: "POST",
         body: JSON.stringify({
           model: "nomic-embed-text",
-          input: ["hello", "world"],
+          input: ["search_document: hello", "search_document: world"],
         }),
       }),
     );
