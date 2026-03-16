@@ -6,6 +6,9 @@ import {
   getAllEmbeddings,
   deleteEmbeddings,
   clearAllEmbeddings,
+  putPageEmbeddings,
+  getAllPageEmbeddings,
+  clearAllPageEmbeddings,
   getMetadata,
   setMetadata,
   getEmbeddingCount,
@@ -79,6 +82,28 @@ describe("embeddings CRUD", () => {
       { blockId: "c", embedding: [3], pageId: 2, blockUpdatedAt: 0, pageUpdatedAt: 0 },
     ]);
     expect(await getEmbeddingCount()).toBe(3);
+  });
+});
+
+describe("page embeddings CRUD", () => {
+  it("stores and retrieves page embeddings", async () => {
+    await putPageEmbeddings([
+      { pageId: 1, pageName: "Page A", embedding: [0.1, 0.2], isJournal: false, blockCount: 5, timestamp: Date.now() },
+      { pageId: 2, pageName: "Page B", embedding: [0.3, 0.4], isJournal: true, blockCount: 3, timestamp: Date.now() },
+    ]);
+    const all = await getAllPageEmbeddings();
+    expect(all).toHaveLength(2);
+    expect(all[0].pageName).toBe("Page A");
+    expect(all[1].isJournal).toBe(true);
+  });
+
+  it("clears all page embeddings", async () => {
+    await putPageEmbeddings([
+      { pageId: 1, pageName: "Page A", embedding: [0.1], isJournal: false, blockCount: 2, timestamp: 0 },
+    ]);
+    await clearAllPageEmbeddings();
+    const all = await getAllPageEmbeddings();
+    expect(all).toHaveLength(0);
   });
 });
 

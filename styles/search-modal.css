@@ -146,6 +146,18 @@
   white-space: nowrap;
 }
 
+.ss-page-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: var(--ls-link-text-color, #4a9eff);
+  color: #fff;
+  flex-shrink: 0;
+}
+
 .ss-breadcrumb-sep {
   margin: 0 4px;
   opacity: 0.6;

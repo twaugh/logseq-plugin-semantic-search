@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { dotProduct, searchEmbeddings } from "../search";
-import type { EmbeddingRecord } from "../storage";
+import { dotProduct, searchEmbeddings, searchPageEmbeddings } from "../search";
+import type { EmbeddingRecord, PageEmbeddingRecord } from "../storage";
 
 describe("dotProduct", () => {
   it("computes dot product correctly", () => {
@@ -51,5 +51,32 @@ describe("searchEmbeddings", () => {
   it("handles single result", () => {
     const results = searchEmbeddings([1, 0, 0], [records[0]], 10, 0);
     expect(results).toHaveLength(1);
+  });
+});
+
+describe("searchPageEmbeddings", () => {
+  const pages: PageEmbeddingRecord[] = [
+    { pageId: 1, pageName: "Page A", embedding: [1, 0, 0], isJournal: false, blockCount: 5, timestamp: 0 },
+    { pageId: 2, pageName: "Page B", embedding: [0, 1, 0], isJournal: true, blockCount: 3, timestamp: 0 },
+    { pageId: 3, pageName: "Page C", embedding: [0.7, 0.7, 0], isJournal: false, blockCount: 2, timestamp: 0 },
+  ];
+
+  it("returns page results sorted by similarity", () => {
+    const results = searchPageEmbeddings([1, 0, 0], pages, 10, 0);
+    expect(results[0].pageName).toBe("Page A");
+    expect(results[0].similarity).toBe(1);
+    expect(results[1].pageName).toBe("Page C");
+  });
+
+  it("includes isJournal flag", () => {
+    const results = searchPageEmbeddings([0, 1, 0], pages, 10, 0);
+    expect(results[0].pageName).toBe("Page B");
+    expect(results[0].isJournal).toBe(true);
+  });
+
+  it("respects topK and threshold", () => {
+    const results = searchPageEmbeddings([1, 0, 0], pages, 1, 0.5);
+    expect(results).toHaveLength(1);
+    expect(results[0].pageName).toBe("Page A");
   });
 });

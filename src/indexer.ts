@@ -6,10 +6,13 @@ import {
   getAllEmbeddings,
   deleteEmbeddings,
   clearAllEmbeddings,
+  clearAllPageEmbeddings,
+  putPageEmbeddings,
   getMetadata,
   setMetadata,
   getEmbeddingCount,
 } from "./storage";
+import type { PageEmbeddingRecord } from "./storage";
 import { getSettings } from "./settings";
 
 export interface IndexingState {
@@ -66,6 +69,7 @@ interface PageResult {
   "original-name"?: string;
   properties?: Record<string, any>;
   "updated-at"?: number;
+  "journal?": boolean;
 }
 
 const SCHEMA_VERSION = 4;
@@ -74,6 +78,7 @@ interface PageInfo {
   name: string;
   properties: Record<string, any>;
   updatedAt: number;
+  isJournal: boolean;
 }
 
 interface BlockInfo {
@@ -145,6 +150,7 @@ export async function indexBlocks(
     const storedSchema = await getMetadata("schemaVersion");
     if (!storedSchema || (storedSchema as number) < SCHEMA_VERSION) {
       await clearAllEmbeddings();
+      await clearAllPageEmbeddings();
       logseq.UI.showMsg("Embedding format changed, re-indexing all blocks...");
       await setMetadata("schemaVersion", SCHEMA_VERSION);
     }
@@ -153,6 +159,7 @@ export async function indexBlocks(
     const storedModel = await getMetadata("model");
     if (storedModel && storedModel !== settings.embeddingModel) {
       await clearAllEmbeddings();
+      await clearAllPageEmbeddings();
       logseq.UI.showMsg("Model changed, re-indexing all blocks...");
     }
     await setMetadata("model", settings.embeddingModel);
@@ -163,7 +170,7 @@ export async function indexBlocks(
     const blockResults: BlockResult[][] = await logseq.DB.datascriptQuery(blockQuery);
 
     // Bulk-fetch all pages
-    const pageQuery = `[:find (pull ?p [:db/id :block/name :block/original-name :block/properties :block/updated-at])
+    const pageQuery = `[:find (pull ?p [:db/id :block/name :block/original-name :block/properties :block/updated-at :block/journal?])
      :where [?p :block/name _]]`;
     const pageResults: PageResult[][] = await logseq.DB.datascriptQuery(pageQuery);
 
@@ -193,6 +200,7 @@ export async function indexBlocks(
         name: page.originalName ?? page["original-name"] ?? page.name ?? "",
         properties: page.properties ?? {},
         updatedAt: page["updated-at"] ?? 0,
+        isJournal: page["journal?"] ?? false,
       });
     }
 
@@ -362,6 +370,59 @@ export async function indexBlocks(
       .filter((id) => !currentBlockIds.has(id));
     if (staleIds.length > 0) {
       await deleteEmbeddings(staleIds);
+    }
+
+    // Compute page centroids
+    if (!abort.signal.aborted) {
+      const allEmbs = staleIds.length > 0 ? await getAllEmbeddings() : allExisting;
+      const pageGroups = new Map<number, number[][]>();
+      for (const emb of allEmbs) {
+        let group = pageGroups.get(emb.pageId);
+        if (!group) {
+          group = [];
+          pageGroups.set(emb.pageId, group);
+        }
+        group.push(emb.embedding);
+      }
+
+      const pageRecords: PageEmbeddingRecord[] = [];
+      for (const [pageId, embeddings] of pageGroups) {
+        if (embeddings.length < 2) continue;
+        const pageInfo = pageMap.get(pageId);
+        if (!pageInfo) continue;
+
+        const dim = embeddings[0].length;
+        const centroid = new Array<number>(dim).fill(0);
+        for (const emb of embeddings) {
+          for (let i = 0; i < dim; i++) {
+            centroid[i] += emb[i];
+          }
+        }
+        let norm = 0;
+        for (let i = 0; i < dim; i++) {
+          centroid[i] /= embeddings.length;
+          norm += centroid[i] * centroid[i];
+        }
+        norm = Math.sqrt(norm);
+        if (norm > 0) {
+          for (let i = 0; i < dim; i++) {
+            centroid[i] /= norm;
+          }
+        }
+
+        pageRecords.push({
+          pageId,
+          pageName: pageInfo.name,
+          embedding: centroid,
+          isJournal: pageInfo.isJournal,
+          blockCount: embeddings.length,
+          timestamp: Date.now(),
+        });
+      }
+
+      if (pageRecords.length > 0) {
+        await putPageEmbeddings(pageRecords);
+      }
     }
 
     const count = await getEmbeddingCount();

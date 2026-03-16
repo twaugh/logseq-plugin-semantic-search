@@ -1,9 +1,11 @@
 const DB_PREFIX = "semantic-search-embeddings";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const EMBEDDINGS_STORE = "embeddings";
 const METADATA_STORE = "metadata";
+const PAGE_EMBEDDINGS_STORE = "pageEmbeddings";
 
 let graphName = "";
+let pageCache: PageEmbeddingRecord[] | null = null;
 
 export function setGraphName(name: string): void {
   graphName = name;
@@ -22,6 +24,15 @@ export interface EmbeddingRecord {
   pageUpdatedAt: number;
 }
 
+export interface PageEmbeddingRecord {
+  pageId: number;
+  pageName: string;
+  embedding: number[];
+  isJournal: boolean;
+  blockCount: number;
+  timestamp: number;
+}
+
 export interface MetadataRecord {
   key: string;
   value: string | number;
@@ -37,6 +48,9 @@ function openDB(): Promise<IDBDatabase> {
       }
       if (!db.objectStoreNames.contains(METADATA_STORE)) {
         db.createObjectStore(METADATA_STORE, { keyPath: "key" });
+      }
+      if (!db.objectStoreNames.contains(PAGE_EMBEDDINGS_STORE)) {
+        db.createObjectStore(PAGE_EMBEDDINGS_STORE, { keyPath: "pageId" });
       }
     };
     request.onsuccess = () => resolve(request.result);
@@ -131,6 +145,46 @@ export async function clearAllEmbeddings(): Promise<void> {
     const store = tx.objectStore(EMBEDDINGS_STORE);
     store.clear();
     tx.oncomplete = () => { db.close(); resolve(); };
+    tx.onerror = () => { db.close(); reject(tx.error); };
+  });
+}
+
+export async function putPageEmbeddings(records: PageEmbeddingRecord[]): Promise<void> {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(PAGE_EMBEDDINGS_STORE, "readwrite");
+    const store = tx.objectStore(PAGE_EMBEDDINGS_STORE);
+    for (const record of records) {
+      store.put(record);
+    }
+    tx.oncomplete = () => { db.close(); pageCache = null; resolve(); };
+    tx.onerror = () => { db.close(); reject(tx.error); };
+  });
+}
+
+export async function getAllPageEmbeddings(): Promise<PageEmbeddingRecord[]> {
+  if (pageCache) return pageCache;
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(PAGE_EMBEDDINGS_STORE, "readonly");
+    const store = tx.objectStore(PAGE_EMBEDDINGS_STORE);
+    const req = store.getAll();
+    req.onsuccess = () => {
+      pageCache = req.result;
+      resolve(pageCache);
+    };
+    req.onerror = () => reject(req.error);
+    tx.oncomplete = () => db.close();
+  });
+}
+
+export async function clearAllPageEmbeddings(): Promise<void> {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(PAGE_EMBEDDINGS_STORE, "readwrite");
+    const store = tx.objectStore(PAGE_EMBEDDINGS_STORE);
+    store.clear();
+    tx.oncomplete = () => { db.close(); pageCache = []; resolve(); };
     tx.onerror = () => { db.close(); reject(tx.error); };
   });
 }

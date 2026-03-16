@@ -1,11 +1,15 @@
 import { debounce } from "./utils";
 import { embedTexts } from "./embeddings";
-import { getAllEmbeddings, getEmbeddingCount } from "./storage";
-import { searchEmbeddings, type SearchResult } from "./search";
+import { getAllEmbeddings, getAllPageEmbeddings, getEmbeddingCount } from "./storage";
+import { dotProduct, searchEmbeddings, searchPageEmbeddings } from "./search";
 import { indexBlocks, indexingState, acquireSearchPriority, releaseSearchPriority } from "./indexer";
 import { getSettings } from "./settings";
 
-interface DisplayResult extends SearchResult {
+interface DisplayResult {
+  type: "block" | "page";
+  blockId: string;
+  pageId: number;
+  similarity: number;
   pageName: string;
   content: string;
   isJournal: boolean;
@@ -167,8 +171,14 @@ function handleKeydown(e: KeyboardEvent): void {
     );
   } else if (e.key === "c" && (e.ctrlKey || e.metaKey) && active) {
     e.preventDefault();
-    const blockId = active.getAttribute("data-block-id");
-    if (blockId) copyBlockReference(blockId);
+    const type = active.getAttribute("data-type") as "block" | "page";
+    if (type === "page") {
+      const pageName = active.getAttribute("data-page-name");
+      if (pageName) copyReference("page", pageName);
+    } else {
+      const blockId = active.getAttribute("data-block-id");
+      if (blockId) copyReference("block", blockId);
+    }
   }
 }
 
@@ -246,16 +256,24 @@ async function performSearch(query: string): Promise<void> {
       releaseSearchPriority();
     }
 
-    const allEmbeddings = await getAllEmbeddings();
-    const results = searchEmbeddings(
+    const [allEmbeddings, allPageEmbeddings] = await Promise.all([
+      getAllEmbeddings(),
+      getAllPageEmbeddings(),
+    ]);
+    const blockResults = searchEmbeddings(
       queryEmbedding,
       allEmbeddings,
+      settings.topK,
+    );
+    const pageResults = searchPageEmbeddings(
+      queryEmbedding,
+      allPageEmbeddings,
       settings.topK,
     );
 
     // Fetch block details
     const displayResults: DisplayResult[] = [];
-    for (const result of results) {
+    for (const result of blockResults) {
       try {
         const block = await logseq.Editor.getBlock(result.blockId);
         if (!block) continue;
@@ -295,6 +313,7 @@ async function performSearch(query: string): Promise<void> {
         breadcrumbs.push(...ancestors);
 
         displayResults.push({
+          type: "block",
           ...result,
           pageName,
           content: block.content ?? "",
@@ -306,7 +325,46 @@ async function performSearch(query: string): Promise<void> {
       }
     }
 
-    lastDisplayResults = displayResults;
+    // Fetch page previews from most relevant blocks
+    for (const result of pageResults) {
+      try {
+        // Find the top 3 most similar blocks in this page
+        const pageBlocks = allEmbeddings
+          .filter((e) => e.pageId === result.pageId)
+          .map((e) => ({ blockId: e.blockId, similarity: dotProduct(queryEmbedding, e.embedding) }))
+          .sort((a, b) => b.similarity - a.similarity)
+          .slice(0, 3);
+
+        const previewLines: string[] = [];
+        for (const pb of pageBlocks) {
+          try {
+            const block = await logseq.Editor.getBlock(pb.blockId);
+            if (block?.content) {
+              const line = block.content.split("\n")[0];
+              previewLines.push(line.length > 80 ? line.slice(0, 80) + "..." : line);
+            }
+          } catch { /* skip */ }
+        }
+
+        displayResults.push({
+          type: "page",
+          blockId: "",
+          pageId: result.pageId,
+          similarity: result.similarity,
+          pageName: result.pageName,
+          content: previewLines.join(" · "),
+          isJournal: result.isJournal,
+          breadcrumbs: [result.pageName],
+        });
+      } catch {
+        // Skip pages we can't fetch
+      }
+    }
+
+    // Sort merged results by similarity
+    displayResults.sort((a, b) => b.similarity - a.similarity);
+    // Trim to topK
+    lastDisplayResults = displayResults.slice(0, settings.topK);
     renderFilteredResults();
   } catch (err) {
     resultsEl.innerHTML = `<div class="ss-error">${(err as Error).message}</div>`;
@@ -325,8 +383,13 @@ function renderResults(results: DisplayResult[]): void {
   resultsEl.innerHTML = "";
   for (const result of results) {
     const item = document.createElement("div");
-    item.className = "ss-result-item";
-    item.setAttribute("data-block-id", result.blockId);
+    item.className = result.type === "page" ? "ss-result-item ss-page-result" : "ss-result-item";
+    item.setAttribute("data-type", result.type);
+    if (result.type === "block") {
+      item.setAttribute("data-block-id", result.blockId);
+    } else {
+      item.setAttribute("data-page-name", result.pageName);
+    }
 
     const similarity = Math.round(result.similarity * 100);
     const preview =
@@ -334,44 +397,73 @@ function renderResults(results: DisplayResult[]): void {
         ? result.content.slice(0, 150) + "..."
         : result.content;
 
-    const breadcrumbHtml = result.breadcrumbs
-      .map((b) => `<span class="ss-breadcrumb-segment">${escapeHtml(b)}</span>`)
-      .join('<span class="ss-breadcrumb-sep">›</span>');
+    const copyTitle = result.type === "page"
+      ? "Copy page reference (Ctrl+C)"
+      : "Copy block reference (Ctrl+C)";
 
-    item.innerHTML = `
-      <div class="ss-result-header">
-        <span class="ss-similarity">${similarity}%</span>
-        <span class="ss-breadcrumbs">${breadcrumbHtml}</span>
-      </div>
-      <div class="ss-result-content">${escapeHtml(preview)}</div>
-      <button class="ss-ref-btn" title="Copy block reference (Ctrl+C)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>
-    `;
+    if (result.type === "page") {
+      item.innerHTML = `
+        <div class="ss-result-header">
+          <span class="ss-similarity">${similarity}%</span>
+          <span class="ss-page-label">Page</span>
+          <span class="ss-breadcrumbs"><span class="ss-breadcrumb-segment">${escapeHtml(result.pageName)}</span></span>
+        </div>
+        <div class="ss-result-content">${escapeHtml(preview)}</div>
+        <button class="ss-ref-btn" title="${copyTitle}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>
+      `;
+    } else {
+      const breadcrumbHtml = result.breadcrumbs
+        .map((b) => `<span class="ss-breadcrumb-segment">${escapeHtml(b)}</span>`)
+        .join('<span class="ss-breadcrumb-sep">›</span>');
+
+      item.innerHTML = `
+        <div class="ss-result-header">
+          <span class="ss-similarity">${similarity}%</span>
+          <span class="ss-breadcrumbs">${breadcrumbHtml}</span>
+        </div>
+        <div class="ss-result-content">${escapeHtml(preview)}</div>
+        <button class="ss-ref-btn" title="${copyTitle}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>
+      `;
+    }
 
     const refBtn = item.querySelector(".ss-ref-btn")!;
     refBtn.addEventListener("click", (e) => {
       e.stopPropagation();
-      copyBlockReference(result.blockId);
+      if (result.type === "page") {
+        copyReference("page", result.pageName);
+      } else {
+        copyReference("block", result.blockId);
+      }
     });
 
     item.addEventListener("click", async (e) => {
-      if (e.shiftKey) {
+      if (result.type === "page") {
+        if (e.shiftKey) {
+          try {
+            const page = await logseq.Editor.getPage(result.pageName);
+            if (page) logseq.Editor.openInRightSidebar(page.uuid);
+          } catch { /* ignore */ }
+          return;
+        }
         try {
-          logseq.Editor.openInRightSidebar(result.blockId);
-        } catch {
-          // ignore sidebar errors
+          logseq.App.pushState("page", { name: result.pageName });
+        } catch { /* ignore */ }
+      } else {
+        if (e.shiftKey) {
+          try {
+            logseq.Editor.openInRightSidebar(result.blockId);
+          } catch { /* ignore */ }
+          return;
         }
-        return;
-      }
-      try {
-        const block = await logseq.Editor.getBlock(result.blockId);
-        if (block?.page?.id) {
-          const page = await logseq.Editor.getPage(block.page.id);
-          if (page?.name) {
-            logseq.Editor.scrollToBlockInPage(page.name, result.blockId);
+        try {
+          const block = await logseq.Editor.getBlock(result.blockId);
+          if (block?.page?.id) {
+            const page = await logseq.Editor.getPage(block.page.id);
+            if (page?.name) {
+              logseq.Editor.scrollToBlockInPage(page.name, result.blockId);
+            }
           }
-        }
-      } catch {
-        // ignore navigation errors
+        } catch { /* ignore */ }
       }
       hideModal();
     });
@@ -395,9 +487,11 @@ function clearResults(): void {
   lastDisplayResults = [];
 }
 
-function copyBlockReference(blockId: string): void {
-  navigator.clipboard.writeText(`((${blockId}))`).then(() => {
-    logseq.UI.showMsg("Block reference copied to clipboard");
+function copyReference(type: "block" | "page", id: string): void {
+  const text = type === "page" ? `[[${id}]]` : `((${id}))`;
+  const label = type === "page" ? "Page" : "Block";
+  navigator.clipboard.writeText(text).then(() => {
+    logseq.UI.showMsg(`${label} reference copied to clipboard`);
   });
 }
 

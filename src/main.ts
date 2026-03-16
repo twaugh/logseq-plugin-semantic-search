@@ -2,7 +2,7 @@ import "@logseq/libs";
 import { settingsSchema } from "./settings";
 import { getSettings } from "./settings";
 import { indexBlocks } from "./indexer";
-import { setGraphName, clearAllEmbeddings } from "./storage";
+import { setGraphName, clearAllEmbeddings, clearAllPageEmbeddings } from "./storage";
 import { createSearchModal, showModal } from "./ui";
 
 async function main() {
@@ -45,6 +45,7 @@ async function main() {
   // Register rebuild command
   logseq.App.registerCommandPalette({ key: "rebuild-index", label: "Semantic Search: Rebuild index" }, async () => {
     await clearAllEmbeddings();
+    await clearAllPageEmbeddings();
     logseq.UI.showMsg("Rebuilding index...");
     try {
       await indexBlocks();
