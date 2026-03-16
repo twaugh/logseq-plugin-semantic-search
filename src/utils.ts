@@ -7,6 +7,11 @@ export function normalizeContent(content: string): string {
   // Strip markdown bold/italic markers
   text = text.replace(/\*{1,3}(.*?)\*{1,3}/g, "$1");
   text = text.replace(/_{1,3}(.*?)_{1,3}/g, "$1");
+  // Strip tags #[[page]] -> page, #tag -> tag
+  text = text.replace(/#\[\[([^\]]*)\]\]/g, "$1");
+  text = text.replace(/#([a-zA-Z][\w-]*)/g, "$1");
+  // Strip page references [[page]] -> page
+  text = text.replace(/\[\[([^\]]*)\]\]/g, "$1");
   // Strip markdown headings
   text = text.replace(/^#{1,6}\s+/gm, "");
   // Strip markdown links [text](url) -> text
@@ -15,8 +20,6 @@ export function normalizeContent(content: string): string {
   text = text.replace(/!\[([^\]]*)\]\([^)]*\)/g, "$1");
   // Strip inline code markers
   text = text.replace(/`([^`]*)`/g, "$1");
-  // Strip TODO/DONE/LATER/NOW markers
-  text = text.replace(/^(TODO|DONE|LATER|NOW|WAITING|CANCELLED)\s+/gm, "");
   // Collapse whitespace
   text = text.replace(/\s+/g, " ").trim();
   return text;
