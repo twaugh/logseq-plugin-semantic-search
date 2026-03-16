@@ -2,6 +2,13 @@ import type { SettingSchemaDesc } from "@logseq/libs/dist/LSPlugin";
 
 export const settingsSchema: SettingSchemaDesc[] = [
   {
+    key: "apiHeading",
+    type: "heading",
+    default: "",
+    title: "API",
+    description: "",
+  },
+  {
     key: "apiEndpoint",
     type: "string",
     default: "http://localhost:11434",
@@ -25,11 +32,11 @@ export const settingsSchema: SettingSchemaDesc[] = [
     description: "Model name for embedding requests",
   },
   {
-    key: "batchSize",
-    type: "number",
-    default: 50,
-    title: "Batch Size",
-    description: "Number of texts per API request",
+    key: "searchHeading",
+    type: "heading",
+    default: "",
+    title: "Search & Indexing",
+    description: "",
   },
   {
     key: "topK",
@@ -37,6 +44,13 @@ export const settingsSchema: SettingSchemaDesc[] = [
     default: 20,
     title: "Top K Results",
     description: "Maximum number of results to display",
+  },
+  {
+    key: "batchSize",
+    type: "number",
+    default: 50,
+    title: "Batch Size",
+    description: "Number of texts per API request",
   },
   {
     key: "autoIndexOnLoad",
