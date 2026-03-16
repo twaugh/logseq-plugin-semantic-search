@@ -241,6 +241,8 @@ async function performSearch(query: string): Promise<void> {
         settings.apiEndpoint,
         settings.embeddingModel,
         settings.apiFormat,
+        undefined,
+        "query",
       );
     } finally {
       releaseSearchPriority();
