@@ -67,7 +67,7 @@ Hover over a result to reveal the **copy** button, or press **Ctrl+C** (**Cmd+C*
 
 The **Include journal** checkbox in the footer controls whether results from journal pages are shown.
 
-Click **Re-index** to rebuild the embedding index. By default, blocks are automatically indexed when the graph loads and only changed blocks are re-embedded on subsequent runs.
+Blocks are automatically indexed when the graph loads, and only changed blocks are re-embedded on subsequent runs. To rebuild the index from scratch, use the **Semantic Search: Rebuild index** command from the command palette (Ctrl/Cmd+Shift+P).
 
 ### Search tips
 

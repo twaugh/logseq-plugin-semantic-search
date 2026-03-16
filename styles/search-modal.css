@@ -180,19 +180,6 @@
   user-select: none;
 }
 
-.ss-reindex {
-  padding: 6px 14px;
-  border-radius: 4px;
-  border: 1px solid var(--ls-border-color, #e0e0e0);
-  background: var(--ls-secondary-background-color, #f7f7f7);
-  color: var(--ls-primary-text-color, #333);
-  cursor: pointer;
-  font-size: 13px;
-}
-
-.ss-reindex:hover {
-  background: var(--ls-tertiary-background-color, #eee);
-}
 
 .ss-loading,
 .ss-error,

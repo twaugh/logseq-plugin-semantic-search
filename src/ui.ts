@@ -39,7 +39,6 @@ export function createSearchModal(): void {
             <input type="checkbox" id="ss-include-journal" checked />
             Include journal
           </label>
-          <button class="ss-reindex" id="ss-reindex">Re-index</button>
         </div>
       </div>
     </div>
@@ -47,7 +46,6 @@ export function createSearchModal(): void {
 
   const input = document.getElementById("ss-input") as HTMLInputElement;
   const closeBtn = document.getElementById("ss-close")!;
-  const reindexBtn = document.getElementById("ss-reindex")!;
   const overlay = document.getElementById("ss-overlay")!;
   const journalCheckbox = document.getElementById("ss-include-journal") as HTMLInputElement;
 
@@ -73,10 +71,6 @@ export function createSearchModal(): void {
 
   journalCheckbox.addEventListener("change", () => {
     renderFilteredResults();
-  });
-
-  reindexBtn.addEventListener("click", () => {
-    startIndexing();
   });
 
   document.addEventListener("keydown", handleKeydown);
