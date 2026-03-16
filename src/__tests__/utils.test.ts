@@ -32,8 +32,20 @@ describe("normalizeContent", () => {
     expect(normalizeContent("use `const x = 1`")).toBe("use const x = 1");
   });
 
-  it("strips TODO markers", () => {
-    expect(normalizeContent("TODO Buy groceries")).toBe("Buy groceries");
+  it("keeps TODO markers", () => {
+    expect(normalizeContent("TODO Buy groceries")).toBe("TODO Buy groceries");
+  });
+
+  it("strips page references, keeps text", () => {
+    expect(normalizeContent("Talk to [[Jon Jones]]")).toBe("Talk to Jon Jones");
+  });
+
+  it("strips tags with page references", () => {
+    expect(normalizeContent("some task #[[Fred Bloggs]]")).toBe("some task Fred Bloggs");
+  });
+
+  it("strips simple tags", () => {
+    expect(normalizeContent("important #urgent")).toBe("important urgent");
   });
 
   it("collapses whitespace", () => {
@@ -44,7 +56,7 @@ describe("normalizeContent", () => {
     const input =
       "priority:: high\n## TODO **Buy** groceries from [store](http://x.com)";
     const result = normalizeContent(input);
-    expect(result).toBe("Buy groceries from store");
+    expect(result).toBe("TODO Buy groceries from store");
   });
 });
 
