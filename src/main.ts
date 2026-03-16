@@ -2,7 +2,7 @@ import "@logseq/libs";
 import { settingsSchema } from "./settings";
 import { getSettings } from "./settings";
 import { indexBlocks } from "./indexer";
-import { setGraphName, invalidateCache } from "./storage";
+import { setGraphName, invalidateCache, clearAllEmbeddings } from "./storage";
 import { createSearchModal, showModal } from "./ui";
 
 async function main() {
@@ -41,6 +41,20 @@ async function main() {
     () => { showModal(); },
     { label: "Semantic Search" },
   );
+
+  // Register rebuild command
+  logseq.App.registerCommandPalette({ key: "rebuild-index", label: "Semantic Search: Rebuild index" }, async () => {
+    await clearAllEmbeddings();
+    invalidateCache();
+    logseq.UI.showMsg("Rebuilding index...");
+    try {
+      await indexBlocks();
+      logseq.UI.showMsg("Index rebuilt successfully");
+    } catch (err) {
+      console.error("Rebuild index failed:", err);
+      logseq.UI.showMsg("Index rebuild failed", "error");
+    }
+  });
 
   // Auto-index on load
   const settings = getSettings();
