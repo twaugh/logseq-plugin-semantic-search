@@ -4,7 +4,6 @@ const EMBEDDINGS_STORE = "embeddings";
 const METADATA_STORE = "metadata";
 
 let graphName = "";
-let cache: EmbeddingRecord[] | null = null;
 
 export function setGraphName(name: string): void {
   graphName = name;
@@ -90,16 +89,6 @@ export async function putEmbeddings(records: EmbeddingRecord[]): Promise<void> {
     }
     tx.oncomplete = () => {
       db.close();
-      if (cache) {
-        for (const record of records) {
-          const idx = cache.findIndex((r) => r.blockId === record.blockId);
-          if (idx >= 0) {
-            cache[idx] = record;
-          } else {
-            cache.push(record);
-          }
-        }
-      }
       resolve();
     };
     tx.onerror = () => { db.close(); reject(tx.error); };
@@ -107,16 +96,12 @@ export async function putEmbeddings(records: EmbeddingRecord[]): Promise<void> {
 }
 
 export async function getAllEmbeddings(): Promise<EmbeddingRecord[]> {
-  if (cache) return cache;
   const db = await openDB();
   return new Promise((resolve, reject) => {
     const tx = db.transaction(EMBEDDINGS_STORE, "readonly");
     const store = tx.objectStore(EMBEDDINGS_STORE);
     const req = store.getAll();
-    req.onsuccess = () => {
-      cache = req.result;
-      resolve(cache);
-    };
+    req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);
     tx.oncomplete = () => db.close();
   });
@@ -133,10 +118,6 @@ export async function deleteEmbeddings(blockIds: string[]): Promise<void> {
     }
     tx.oncomplete = () => {
       db.close();
-      if (cache) {
-        const idSet = new Set(blockIds);
-        cache = cache.filter((r) => !idSet.has(r.blockId));
-      }
       resolve();
     };
     tx.onerror = () => { db.close(); reject(tx.error); };
@@ -149,13 +130,9 @@ export async function clearAllEmbeddings(): Promise<void> {
     const tx = db.transaction(EMBEDDINGS_STORE, "readwrite");
     const store = tx.objectStore(EMBEDDINGS_STORE);
     store.clear();
-    tx.oncomplete = () => { db.close(); cache = []; resolve(); };
+    tx.oncomplete = () => { db.close(); resolve(); };
     tx.onerror = () => { db.close(); reject(tx.error); };
   });
-}
-
-export function invalidateCache(): void {
-  cache = null;
 }
 
 export async function getEmbeddingCount(): Promise<number> {
