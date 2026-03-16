@@ -88,7 +88,6 @@ Semantic search matches meaning, not exact words. To get the best results:
 | Embedding Model | `nomic-embed-text` | Model name for embedding requests |
 | Batch Size | `50` | Number of texts per API request |
 | Top K Results | `20` | Maximum number of search results |
-| Minimum Block Length | `10` | Skip blocks shorter than this (characters) |
 | Auto-index on Load | `true` | Automatically index when the graph loads |
 
 ## Support

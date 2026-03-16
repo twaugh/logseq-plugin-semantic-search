@@ -39,13 +39,6 @@ export const settingsSchema: SettingSchemaDesc[] = [
     description: "Maximum number of results to display",
   },
   {
-    key: "minBlockLength",
-    type: "number",
-    default: 10,
-    title: "Minimum Block Length",
-    description: "Skip blocks shorter than this many characters",
-  },
-  {
     key: "autoIndexOnLoad",
     type: "boolean",
     default: true,
@@ -60,7 +53,6 @@ export interface PluginSettings {
   embeddingModel: string;
   batchSize: number;
   topK: number;
-  minBlockLength: number;
   autoIndexOnLoad: boolean;
 }
 
@@ -72,7 +64,6 @@ export function getSettings(): PluginSettings {
     embeddingModel: s?.embeddingModel ?? "nomic-embed-text",
     batchSize: s?.batchSize ?? 50,
     topK: s?.topK ?? 20,
-    minBlockLength: s?.minBlockLength ?? 10,
     autoIndexOnLoad: s?.autoIndexOnLoad ?? true,
   };
 }
