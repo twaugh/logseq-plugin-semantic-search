@@ -181,6 +181,37 @@
 }
 
 
+.ss-page-group .ss-breadcrumbs {
+  color: var(--ls-primary-text-color, #333);
+  font-size: 13px;
+}
+
+.ss-group-toggle {
+  font-size: 10px;
+  user-select: none;
+  min-width: 12px;
+  text-align: center;
+  color: var(--ls-secondary-text-color, #999);
+}
+
+.ss-block-count {
+  font-size: 12px;
+  color: var(--ls-secondary-text-color, #999);
+  white-space: nowrap;
+}
+
+.ss-group-children {
+  padding-left: 0;
+}
+
+.ss-grouped-block {
+  margin-left: 20px;
+}
+
+.ss-hidden {
+  display: none;
+}
+
 .ss-loading,
 .ss-error,
 .ss-no-results {

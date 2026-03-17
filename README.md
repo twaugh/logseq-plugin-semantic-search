@@ -63,9 +63,11 @@ Open the search modal with either the **Alt+K** keyboard shortcut or the toolbar
 
 Type a query and results appear ranked by similarity. Click a result to navigate to that block. **Shift+click** (or **Shift+Enter**) opens the block in the right sidebar instead.
 
-Hover over a result to reveal the **copy** button, or press **Ctrl+C** (**Cmd+C** on Mac) with a result selected, to copy a `((block reference))` to the clipboard.
+When a query matches several blocks on the same page, they are collapsed into a **page group** showing the best match score and the number of matching blocks. Click the group header to expand or collapse its blocks. Short queries group more aggressively; longer, more specific queries tend to show individual blocks. Journal pages are never grouped.
 
-The **Include journal** checkbox in the footer controls whether results from journal pages are shown.
+Hover over a result to reveal the **copy** button, or press **Ctrl+C** (**Cmd+C** on Mac) with a result selected, to copy a `((block reference))` to the clipboard. On a page group, this copies a `[[page reference]]` instead.
+
+Results from journal pages are gently down-ranked based on age so that recent entries surface above older ones. The **Include journal** checkbox in the footer controls whether journal results are shown at all.
 
 Blocks are automatically indexed when the graph loads, and only changed blocks are re-embedded on subsequent runs. To rebuild the index from scratch, use the **Semantic Search: Rebuild index** command from the command palette (Ctrl/Cmd+Shift+P).
 
