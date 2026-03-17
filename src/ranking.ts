@@ -24,13 +24,13 @@ export type RankedItem = PageGroup | SingleBlock;
 
 export const DECAY_FLOOR = 0.85;
 export const DECAY_SCALE_DAYS = 180;
-export const T_MIN = 2;
-export const T_MAX = 5;
+export const T_MIN = 4;
+export const T_MAX = 6;
 export const W_MAX = 0.15;
 export const W_MIN = 0.03;
 export const QUERY_SHORT = 3;
 export const QUERY_LONG = 8;
-export const OVERFETCH_MULTIPLIER = 3;
+export const OVERFETCH_MULTIPLIER = 2;
 
 export function getOverfetchCount(topK: number): number {
   return topK * OVERFETCH_MULTIPLIER;

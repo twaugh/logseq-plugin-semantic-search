@@ -15,9 +15,9 @@ import {
 import type { SearchResult } from "../search";
 
 describe("getOverfetchCount", () => {
-  it("returns 3x topK", () => {
-    expect(getOverfetchCount(10)).toBe(30);
-    expect(getOverfetchCount(1)).toBe(3);
+  it("returns 2x topK", () => {
+    expect(getOverfetchCount(10)).toBe(20);
+    expect(getOverfetchCount(1)).toBe(2);
   });
 });
 
@@ -123,16 +123,17 @@ describe("groupAndRank", () => {
       makeScoredResult("a1", 1, 0.9),
       makeScoredResult("a2", 1, 0.8),
       makeScoredResult("a3", 1, 0.7),
+      makeScoredResult("a4", 1, 0.6),
       makeScoredResult("b1", 2, 0.85),
     ];
-    // queryWordCount=1 → threshold=T_MIN=2, densityWeight=W_MAX=0.15
+    // queryWordCount=1 → threshold=T_MIN=4, densityWeight=W_MAX=0.15
     const items = groupAndRank(scored, 1, 10, new Set());
     expect(items[0].kind).toBe("page-group");
     if (items[0].kind === "page-group") {
       expect(items[0].pageId).toBe(1);
-      // pageScore = 0.9 + 0.8*0.15/1 + 0.7*0.15/2 (harmonic decay)
-      expect(items[0].pageScore).toBeCloseTo(0.9 + 0.8 * 0.15 + 0.7 * 0.15 / 2);
-      expect(items[0].blocks).toHaveLength(3);
+      // pageScore = 0.9 + 0.8*0.15/1 + 0.7*0.15/2 + 0.6*0.15/3 (harmonic decay)
+      expect(items[0].pageScore).toBeCloseTo(0.9 + 0.8 * 0.15 + 0.7 * 0.15 / 2 + 0.6 * 0.15 / 3);
+      expect(items[0].blocks).toHaveLength(4);
     }
     expect(items[1].kind).toBe("single-block");
   });
@@ -142,7 +143,7 @@ describe("groupAndRank", () => {
       makeScoredResult("a1", 1, 0.9),
       makeScoredResult("b1", 2, 0.85),
     ];
-    // threshold=2, page 1 has only 1 block
+    // threshold=4, page 1 has only 1 block
     const items = groupAndRank(scored, 1, 10, new Set());
     expect(items.every((i) => i.kind === "single-block")).toBe(true);
   });
@@ -152,6 +153,7 @@ describe("groupAndRank", () => {
       makeScoredResult("a1", 1, 0.9),
       makeScoredResult("a2", 1, 0.8),
       makeScoredResult("a3", 1, 0.7),
+      makeScoredResult("a4", 1, 0.6),
     ];
     const journalPageIds = new Set([1]);
     const items = groupAndRank(scored, 1, 10, journalPageIds);
@@ -189,6 +191,7 @@ describe("groupAndRank", () => {
       makeScoredResult("a1", 1, 0.9),
       makeScoredResult("a2", 1, 0.8),
       makeScoredResult("a3", 1, 0.7),
+      makeScoredResult("a4", 1, 0.6),
     ];
     const items = groupAndRank(scored, 1, 10, new Set());
     expect(items).toHaveLength(1);
