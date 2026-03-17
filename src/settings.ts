@@ -93,16 +93,13 @@ export interface PluginSettings {
   blockProperties: string;
 }
 
+const settingsDefaults: PluginSettings = Object.fromEntries(
+  settingsSchema
+    .filter((s) => s.type !== "heading")
+    .map((s) => [s.key, s.default]),
+) as unknown as PluginSettings;
+
 export function getSettings(): PluginSettings {
   const s = logseq.settings as Partial<PluginSettings> | undefined;
-  return {
-    apiEndpoint: s?.apiEndpoint ?? "http://localhost:11434",
-    apiFormat: s?.apiFormat ?? "ollama",
-    embeddingModel: s?.embeddingModel ?? "nomic-embed-text",
-    batchSize: s?.batchSize ?? 50,
-    topK: s?.topK ?? 20,
-    autoIndexOnLoad: s?.autoIndexOnLoad ?? true,
-    pageProperties: s?.pageProperties ?? "tags, alias, category, type, description, summary, author, topic, area, project, status, priority, platform",
-    blockProperties: s?.blockProperties ?? "type, status, priority, tags, source, url, author",
-  };
+  return { ...settingsDefaults, ...s };
 }
