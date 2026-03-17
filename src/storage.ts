@@ -122,10 +122,6 @@ export function invalidateEmbeddingCache(): void {
   embeddingCache = null;
 }
 
-export function evictEmbeddingCache(): void {
-  embeddingCache = null;
-}
-
 export async function deleteEmbeddings(blockIds: string[]): Promise<void> {
   if (blockIds.length === 0) return;
   const db = await openDB();

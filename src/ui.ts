@@ -1,6 +1,6 @@
 import { debounce } from "./utils";
 import { embedTexts } from "./embeddings";
-import { getCachedEmbeddings, getEmbeddingCount, evictEmbeddingCache } from "./storage";
+import { getCachedEmbeddings, getEmbeddingCount, invalidateEmbeddingCache } from "./storage";
 import { searchEmbeddings, type SearchResult } from "./search";
 import { indexBlocks, indexingState, acquireSearchPriority, releaseSearchPriority } from "./indexer";
 import { getSettings } from "./settings";
@@ -196,7 +196,7 @@ function hideModal(): void {
   // Evict embedding cache after idle period
   if (evictTimer) clearTimeout(evictTimer);
   evictTimer = setTimeout(() => {
-    evictEmbeddingCache();
+    invalidateEmbeddingCache();
     evictTimer = undefined;
   }, CACHE_EVICT_MS);
 }
@@ -427,7 +427,7 @@ export function showModal(): void {
     evictTimer = undefined;
   }
   // Invalidate cache so first search loads fresh from IDB
-  evictEmbeddingCache();
+  invalidateEmbeddingCache();
   clearResults();
   logseq.showMainUI();
   if (indexingState.status === "idle") {
