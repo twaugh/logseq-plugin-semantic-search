@@ -54,7 +54,7 @@ export function createSearchModal(): void {
   const debouncedSearch = debounce(async (...args: unknown[]) => {
     const query = args[0] as string;
     await performSearch(query);
-  }, 300);
+  }, 500);
 
   input.addEventListener("input", () => {
     historyIndex = -1;
@@ -167,6 +167,10 @@ function handleKeydown(e: KeyboardEvent): void {
     (active as HTMLElement).dispatchEvent(
       new MouseEvent("click", { shiftKey: e.shiftKey, bubbles: true }),
     );
+  } else if (e.key === "Enter" && !active && input && document.activeElement === input) {
+    e.preventDefault();
+    const query = input.value.trim();
+    if (query) performSearch(query);
   } else if (e.key === "c" && (e.ctrlKey || e.metaKey) && active) {
     e.preventDefault();
     const blockId = active.getAttribute("data-block-id");
