@@ -6,8 +6,10 @@ export function normalizeContent(content: string): string {
   text = text.replace(/^[a-zA-Z_-]+::.*$/gm, "");
 
   // Strip Logseq block references ((uuid))
-  // Logseq UUIDs are standard 36-char strings or short refs.
   text = text.replace(/\(\([0-9a-fA-F-]+\)\)/g, "");
+
+  // Strip Logseq embed macros {{embed ...}}
+  text = text.replace(/\{\{embed\s[^}]*\}\}/g, "");
 
   // Strip raw URLs from images, but PRESERVE the alt text
   // ![Diagram of architecture](https://...) -> Diagram of architecture

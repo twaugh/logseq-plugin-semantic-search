@@ -14,6 +14,13 @@ describe("normalizeContent", () => {
     );
   });
 
+  it("strips embed macros", () => {
+    expect(normalizeContent("Before {{embed ((abc-123))}} after")).toBe(
+      "Before after",
+    );
+    expect(normalizeContent("{{embed [[Some Page]]}}")).toBe("");
+  });
+
   it("strips markdown link URLs, keeps bracketed text", () => {
     expect(normalizeContent("[click here](http://example.com)")).toBe(
       "[click here]",
