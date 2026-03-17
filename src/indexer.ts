@@ -94,6 +94,8 @@ function buildEmbeddingText(
   if (!block) return "";
 
   const normalized = normalizeContent(block.content);
+  if (!normalized) return "";
+
   const isTopLevel = block.parentId === block.pageId;
 
   // Build the primary text (block content, possibly with parent for short blocks)
@@ -318,6 +320,7 @@ export async function indexBlocks(
       const blockInfo = blockMap.get(block.id);
       const pageInfo = pageMap.get(block.page?.id ?? 0);
       const embeddingText = buildEmbeddingText(block.id, blockMap, pageMap, pageAllowList, blockAllowList);
+      if (!embeddingText) continue;
       toEmbed.push({
         blockId,
         content: truncate(embeddingText, 4000),
