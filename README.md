@@ -2,7 +2,7 @@
 
 Search across all your Logseq blocks using text embeddings. Instead of matching exact keywords, semantic search finds blocks that are **conceptually similar** to your query.
 
-Blocks are embedded with their full context — page name, page properties, and parent block hierarchy — so searching for a page topic or parent heading surfaces relevant child blocks.
+Each block is embedded content-first, followed by its context — page name, page and block properties, and parent block hierarchy — so searching for a page topic or parent heading surfaces relevant child blocks.
 
 ## Requirements
 
@@ -89,6 +89,8 @@ Semantic search matches meaning, not exact words. To get the best results:
 | Batch Size | `50` | Number of texts per API request |
 | Top K Results | `20` | Maximum number of search results |
 | Auto-index on Load | `true` | Automatically index when the graph loads |
+| Page Properties | `tags, alias, category, type, ...` | Comma-separated page properties to include in embedding context |
+| Block Properties | `type, status, priority, tags, ...` | Comma-separated block properties to include in embedding text |
 
 ## Support
 
