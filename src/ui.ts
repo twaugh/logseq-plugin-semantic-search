@@ -1,6 +1,6 @@
 import { debounce } from "./utils";
 import { embedTexts } from "./embeddings";
-import { getAllEmbeddings, getEmbeddingCount } from "./storage";
+import { getCachedEmbeddings, getEmbeddingCount, evictEmbeddingCache } from "./storage";
 import { searchEmbeddings, type SearchResult } from "./search";
 import { indexBlocks, indexingState, acquireSearchPriority, releaseSearchPriority } from "./indexer";
 import { getSettings } from "./settings";
@@ -13,6 +13,8 @@ interface DisplayResult extends SearchResult {
 }
 
 let progressInterval: ReturnType<typeof setInterval> | undefined;
+let evictTimer: ReturnType<typeof setTimeout> | undefined;
+const CACHE_EVICT_MS = 60_000;
 let lastDisplayResults: DisplayResult[] = [];
 let lastQuery = "";
 const queryHistory: string[] = [];
@@ -187,6 +189,12 @@ function hideModal(): void {
   }
   addToHistory(lastQuery);
   logseq.hideMainUI();
+  // Evict embedding cache after idle period
+  if (evictTimer) clearTimeout(evictTimer);
+  evictTimer = setTimeout(() => {
+    evictEmbeddingCache();
+    evictTimer = undefined;
+  }, CACHE_EVICT_MS);
 }
 
 async function updateStatus(): Promise<void> {
@@ -248,7 +256,7 @@ async function performSearch(query: string): Promise<void> {
       releaseSearchPriority();
     }
 
-    const allEmbeddings = await getAllEmbeddings();
+    const allEmbeddings = await getCachedEmbeddings();
     const results = searchEmbeddings(
       queryEmbedding,
       allEmbeddings,
@@ -410,6 +418,12 @@ function escapeHtml(text: string): string {
 }
 
 export function showModal(): void {
+  if (evictTimer) {
+    clearTimeout(evictTimer);
+    evictTimer = undefined;
+  }
+  // Invalidate cache so first search loads fresh from IDB
+  evictEmbeddingCache();
   clearResults();
   logseq.showMainUI();
   if (indexingState.status === "idle") {

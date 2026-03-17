@@ -89,6 +89,7 @@ export async function putEmbeddings(records: EmbeddingRecord[]): Promise<void> {
     }
     tx.oncomplete = () => {
       db.close();
+      invalidateEmbeddingCache();
       resolve();
     };
     tx.onerror = () => { db.close(); reject(tx.error); };
@@ -107,6 +108,24 @@ export async function getAllEmbeddings(): Promise<EmbeddingRecord[]> {
   });
 }
 
+// In-memory embedding cache for fast repeated searches
+let embeddingCache: EmbeddingRecord[] | null = null;
+
+export async function getCachedEmbeddings(): Promise<EmbeddingRecord[]> {
+  if (!embeddingCache) {
+    embeddingCache = await getAllEmbeddings();
+  }
+  return embeddingCache;
+}
+
+export function invalidateEmbeddingCache(): void {
+  embeddingCache = null;
+}
+
+export function evictEmbeddingCache(): void {
+  embeddingCache = null;
+}
+
 export async function deleteEmbeddings(blockIds: string[]): Promise<void> {
   if (blockIds.length === 0) return;
   const db = await openDB();
@@ -118,6 +137,7 @@ export async function deleteEmbeddings(blockIds: string[]): Promise<void> {
     }
     tx.oncomplete = () => {
       db.close();
+      invalidateEmbeddingCache();
       resolve();
     };
     tx.onerror = () => { db.close(); reject(tx.error); };
@@ -130,7 +150,7 @@ export async function clearAllEmbeddings(): Promise<void> {
     const tx = db.transaction(EMBEDDINGS_STORE, "readwrite");
     const store = tx.objectStore(EMBEDDINGS_STORE);
     store.clear();
-    tx.oncomplete = () => { db.close(); resolve(); };
+    tx.oncomplete = () => { db.close(); invalidateEmbeddingCache(); resolve(); };
     tx.onerror = () => { db.close(); reject(tx.error); };
   });
 }
