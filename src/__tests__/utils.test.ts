@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { normalizeContent, hashContent, debounce, formatPageProperties } from "../utils";
+import { normalizeContent, hashContent, debounce, formatProperties, parseAllowList, parseBlockProperties, wordCount } from "../utils";
 
 describe("normalizeContent", () => {
   it("strips property lines", () => {
@@ -75,28 +75,56 @@ describe("hashContent", () => {
   });
 });
 
-describe("formatPageProperties", () => {
-  it("formats simple properties", () => {
-    expect(formatPageProperties({ tags: "meeting", category: "work" })).toBe(
-      "[category: work, tags: meeting]",
-    );
+describe("formatProperties", () => {
+  const allowList = parseAllowList("tags, category, status");
+
+  it("formats allowed properties", () => {
+    expect(formatProperties({ tags: "meeting", category: "work" }, allowList)).toEqual([
+      "category: work",
+      "tags: meeting",
+    ]);
   });
 
   it("formats array properties", () => {
-    expect(formatPageProperties({ tags: ["project-x", "planning"] })).toBe(
-      "[tags: project-x, planning]",
-    );
+    expect(formatProperties({ tags: ["project-x", "planning"] }, allowList)).toEqual([
+      "tags: project-x, planning",
+    ]);
   });
 
-  it("skips internal properties", () => {
-    expect(formatPageProperties({ id: "123", filters: {}, tags: "meeting" })).toBe(
-      "[tags: meeting]",
-    );
+  it("excludes properties not in allow-list", () => {
+    expect(formatProperties({ id: "123", filters: {}, tags: "meeting" }, allowList)).toEqual([
+      "tags: meeting",
+    ]);
   });
 
-  it("returns empty string for no useful properties", () => {
-    expect(formatPageProperties({})).toBe("");
-    expect(formatPageProperties({ id: "123", collapsed: true })).toBe("");
+  it("returns empty array when no properties match", () => {
+    expect(formatProperties({}, allowList)).toEqual([]);
+    expect(formatProperties({ id: "123", collapsed: true }, allowList)).toEqual([]);
+  });
+});
+
+describe("parseBlockProperties", () => {
+  it("parses key:: value lines", () => {
+    expect(parseBlockProperties("priority:: critical\nstatus:: done\nSome content")).toEqual({
+      priority: "critical",
+      status: "done",
+    });
+  });
+
+  it("returns empty object for no properties", () => {
+    expect(parseBlockProperties("Just plain content")).toEqual({});
+  });
+});
+
+describe("wordCount", () => {
+  it("counts words", () => {
+    expect(wordCount("hello world")).toBe(2);
+    expect(wordCount("one two three four five")).toBe(5);
+  });
+
+  it("returns 0 for empty/whitespace", () => {
+    expect(wordCount("")).toBe(0);
+    expect(wordCount("   ")).toBe(0);
   });
 });
 

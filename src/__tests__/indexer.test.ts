@@ -9,6 +9,8 @@ const mockLogseq = {
     batchSize: 2,
     topK: 20,
     autoIndexOnLoad: true,
+    pageProperties: "tags, alias, category, type, description, summary, author, topic, area, project, status, priority, platform",
+    blockProperties: "type, status, priority, tags, source, url, author",
   },
   DB: {
     datascriptQuery: vi.fn(),
@@ -189,13 +191,101 @@ describe("indexBlocks", () => {
     const call = mockEmbedTexts.mock.calls[0];
     const texts = call[0];
 
-    // Find the child block's embedding text
+    // Find the child block's embedding text (4 words, so short-block heuristic applies)
     const childText = texts.find((t: string) => t.includes("Discussed timeline and budget"));
     expect(childText).toBeDefined();
+    // Short block: parent prepended before separator
+    expect(childText).toContain("Project X Updates > Discussed timeline and budget");
+    // Context section follows
+    expect(childText).toContain("--- Context ---");
     expect(childText).toContain("[Page: Meeting Notes]");
-    expect(childText).toContain("[tags: project-x, planning]");
-    expect(childText).toContain("> Project X Updates");
-    expect(childText).toContain("Discussed timeline and budget");
+    expect(childText).toContain("tags: project-x, planning");
+    // Order: block content before context separator, page/props after
+    const sepIndex = childText!.indexOf("--- Context ---");
+    expect(childText!.indexOf("Project X Updates > Discussed timeline and budget")).toBeLessThan(sepIndex);
+    expect(childText!.indexOf("[Page: Meeting Notes]")).toBeGreaterThan(sepIndex);
+    expect(childText!.indexOf("tags: project-x, planning")).toBeGreaterThan(sepIndex);
+  });
+
+  it("uses short-block heuristic for blocks under 5 words", async () => {
+    // Grandparent -> Parent -> short child
+    mockQueries(
+      [
+        [{ id: 1, uuid: "u1", content: "Logistics", page: { id: 10 }, parent: { id: 10 }, "updated-at": 1000 }],
+        [{ id: 2, uuid: "u2", content: "There are concerns about", page: { id: 10 }, parent: { id: 1 }, "updated-at": 1000 }],
+        [{ id: 3, uuid: "u3", content: "security", page: { id: 10 }, parent: { id: 2 }, "updated-at": 1000 }],
+      ],
+      [[{ id: 10, name: "project", originalName: "Project Architecture", properties: {}, "updated-at": 1000 }]],
+    );
+
+    mockEmbedTexts
+      .mockResolvedValueOnce([[0.1], [0.2]])
+      .mockResolvedValueOnce([[0.3]]);
+
+    await indexBlocks();
+
+    const allTexts = mockEmbedTexts.mock.calls.flatMap((call: any) => call[0]);
+    const shortBlockText = allTexts.find((t: string) => t.includes("security"));
+    expect(shortBlockText).toBeDefined();
+    // Short block gets parent prepended
+    expect(shortBlockText).toContain("There are concerns about > security");
+    // Grandparent goes to context
+    expect(shortBlockText).toContain("> Logistics");
+    // Immediate parent is NOT in context as ancestor
+    const sepIndex = shortBlockText!.indexOf("--- Context ---");
+    const contextSection = shortBlockText!.slice(sepIndex);
+    expect(contextSection).not.toContain("> There are concerns about");
+    // Order: combined block+parent before separator, page and grandparent after
+    expect(shortBlockText!.indexOf("There are concerns about > security")).toBeLessThan(sepIndex);
+    expect(contextSection).toContain("[Page: Project Architecture]");
+    expect(contextSection).toContain("> Logistics");
+  });
+
+  it("does not use short-block heuristic for top-level blocks", async () => {
+    mockQueries(
+      [
+        [{ id: 1, uuid: "u1", content: "cost", page: { id: 10 }, parent: { id: 10 }, "updated-at": 1000 }],
+      ],
+      [[{ id: 10, name: "test", originalName: "Test", properties: {}, "updated-at": 1000 }]],
+    );
+
+    mockEmbedTexts.mockResolvedValue([[0.1]]);
+
+    await indexBlocks();
+
+    const texts = mockEmbedTexts.mock.calls[0][0];
+    // Top-level short block should NOT have parent prepended
+    expect(texts[0]).toMatch(/^cost/);
+    // Block content before context
+    const sepIndex = texts[0].indexOf("--- Context ---");
+    expect(sepIndex).toBeGreaterThan(0);
+    expect(texts[0].indexOf("cost")).toBeLessThan(sepIndex);
+    expect(texts[0].indexOf("[Page: Test]")).toBeGreaterThan(sepIndex);
+  });
+
+  it("includes allowed block properties in embedding text", async () => {
+    mockQueries(
+      [
+        [{ id: 1, uuid: "u1", content: "priority:: critical\nstatus:: in-progress\ncollapsed:: true\nDo the deployment", page: { id: 10 }, parent: { id: 10 }, "updated-at": 1000 }],
+      ],
+      [[defaultPage]],
+    );
+
+    mockEmbedTexts.mockResolvedValue([[0.1]]);
+
+    await indexBlocks();
+
+    const texts = mockEmbedTexts.mock.calls[0][0];
+    expect(texts[0]).toContain("priority: critical");
+    expect(texts[0]).toContain("status: in-progress");
+    // collapsed is not in the block allow-list
+    expect(texts[0]).not.toContain("collapsed");
+    // Order: block content, then block properties, then context separator, then page
+    const sepIndex = texts[0].indexOf("--- Context ---");
+    expect(texts[0].indexOf("Do the deployment")).toBeLessThan(texts[0].indexOf("priority: critical"));
+    expect(texts[0].indexOf("priority: critical")).toBeLessThan(sepIndex);
+    expect(texts[0].indexOf("status: in-progress")).toBeLessThan(sepIndex);
+    expect(texts[0].indexOf("[Page: Test Page]")).toBeGreaterThan(sepIndex);
   });
 
   it("re-embeds when page is renamed", async () => {

@@ -59,6 +59,27 @@ export const settingsSchema: SettingSchemaDesc[] = [
     title: "Auto-index on Load",
     description: "Automatically index blocks when the graph loads",
   },
+  {
+    key: "propertiesHeading",
+    type: "heading",
+    default: "",
+    title: "Properties",
+    description: "",
+  },
+  {
+    key: "pageProperties",
+    type: "string",
+    default: "tags, alias, category, type, description, summary, author, topic, area, project, status, priority, platform",
+    title: "Page Properties",
+    description: "Comma-separated list of page properties to include in embedding context",
+  },
+  {
+    key: "blockProperties",
+    type: "string",
+    default: "type, status, priority, tags, source, url, author",
+    title: "Block Properties",
+    description: "Comma-separated list of block properties to include in embedding text",
+  },
 ];
 
 export interface PluginSettings {
@@ -68,6 +89,8 @@ export interface PluginSettings {
   batchSize: number;
   topK: number;
   autoIndexOnLoad: boolean;
+  pageProperties: string;
+  blockProperties: string;
 }
 
 export function getSettings(): PluginSettings {
@@ -79,5 +102,7 @@ export function getSettings(): PluginSettings {
     batchSize: s?.batchSize ?? 50,
     topK: s?.topK ?? 20,
     autoIndexOnLoad: s?.autoIndexOnLoad ?? true,
+    pageProperties: s?.pageProperties ?? "tags, alias, category, type, description, summary, author, topic, area, project, status, priority, platform",
+    blockProperties: s?.blockProperties ?? "type, status, priority, tags, source, url, author",
   };
 }
