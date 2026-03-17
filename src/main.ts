@@ -55,14 +55,18 @@ async function main() {
     }
   });
 
+  async function syncGraphName(): Promise<void> {
+    const graph = await logseq.App.getCurrentGraph();
+    if (graph?.name) setGraphName(graph.name);
+  }
+
   // Auto-index on load
   const settings = getSettings();
   if (settings.autoIndexOnLoad) {
     // Delay to let Logseq finish loading
     setTimeout(async () => {
       try {
-        const graph = await logseq.App.getCurrentGraph();
-        if (graph?.name) setGraphName(graph.name);
+        await syncGraphName();
         await indexBlocks();
       } catch (err) {
         console.error("Auto-indexing failed:", err);
@@ -72,8 +76,7 @@ async function main() {
 
   // Re-index on graph change
   logseq.App.onCurrentGraphChanged(async () => {
-    const graph = await logseq.App.getCurrentGraph();
-    if (graph?.name) setGraphName(graph.name);
+    await syncGraphName();
     const s = getSettings();
     if (s.autoIndexOnLoad) {
       setTimeout(() => {
