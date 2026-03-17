@@ -9,6 +9,7 @@ import {
   getMetadata,
   setMetadata,
   getEmbeddingCount,
+  invalidateEmbeddingCache,
 } from "./storage";
 import { getSettings } from "./settings";
 
@@ -405,6 +406,9 @@ export async function indexBlocks(
     const count = await getEmbeddingCount();
     await setMetadata("blockCount", count);
     await setMetadata("lastIndexed", Date.now());
+
+    // Ensure search cache is fresh after indexing
+    invalidateEmbeddingCache();
 
     if (!abort.signal.aborted && total > 0) {
       logseq.UI.showMsg(`Indexed ${total} blocks`);
