@@ -49,19 +49,35 @@ export function truncate(text: string, maxLength: number): string {
   return text.slice(0, maxLength);
 }
 
-const SKIP_PROPERTIES = new Set([
-  "id", "filters", "collapsed", "icon",
-  "public", "exclude-from-graph-view",
-]);
+export function parseAllowList(csv: string): Set<string> {
+  return new Set(
+    csv.split(",").map((s) => s.trim().toLowerCase()).filter(Boolean),
+  );
+}
 
-export function formatPageProperties(props: Record<string, any>): string {
-  const entries = Object.entries(props)
-    .filter(([k]) => !SKIP_PROPERTIES.has(k))
+export function formatProperties(
+  props: Record<string, any>,
+  allowList: Set<string>,
+): string[] {
+  return Object.entries(props)
+    .filter(([k]) => allowList.has(k.toLowerCase()))
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([k, v]) => {
       const val = Array.isArray(v) ? v.join(", ") : String(v);
       return `${k}: ${val}`;
     });
-  if (entries.length === 0) return "";
-  return `[${entries.join(", ")}]`;
+}
+
+export function parseBlockProperties(content: string): Record<string, string> {
+  const props: Record<string, string> = {};
+  for (const match of content.matchAll(/^([a-zA-Z_-]+)::\s*(.+)$/gm)) {
+    props[match[1]] = match[2].trim();
+  }
+  return props;
+}
+
+export function wordCount(text: string): number {
+  const trimmed = text.trim();
+  if (!trimmed) return 0;
+  return trimmed.split(/\s+/).length;
 }

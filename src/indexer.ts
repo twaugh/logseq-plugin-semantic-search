@@ -1,4 +1,4 @@
-import { normalizeContent, truncate, formatPageProperties } from "./utils";
+import { normalizeContent, truncate, formatProperties, parseAllowList, parseBlockProperties, wordCount } from "./utils";
 import { embedTexts } from "./embeddings";
 import {
   type EmbeddingRecord,
@@ -87,24 +87,56 @@ function buildEmbeddingText(
   blockId: number,
   blockMap: Map<number, BlockInfo>,
   pageMap: Map<number, PageInfo>,
+  pageAllowList: Set<string>,
+  blockAllowList: Set<string>,
 ): string {
   const block = blockMap.get(blockId);
   if (!block) return "";
 
-  const parts: string[] = [];
+  const normalized = normalizeContent(block.content);
+  const isTopLevel = block.parentId === block.pageId;
 
-  // Page context
-  const pageInfo = pageMap.get(block.pageId);
-  if (pageInfo?.name) {
-    let pageLine = `[Page: ${pageInfo.name}]`;
-    const propsStr = formatPageProperties(pageInfo.properties);
-    if (propsStr) pageLine += ` ${propsStr}`;
-    parts.push(pageLine);
+  // Build the primary text (block content, possibly with parent for short blocks)
+  const primaryParts: string[] = [];
+  let immediateParentUsed = false;
+
+  if (!isTopLevel && wordCount(normalized) < 5) {
+    const parent = blockMap.get(block.parentId);
+    if (parent) {
+      const parentContent = normalizeContent(parent.content);
+      if (parentContent) {
+        primaryParts.push(`${parentContent} > ${normalized}`);
+        immediateParentUsed = true;
+      }
+    }
   }
 
-  // Ancestor context (walk up parent chain)
+  if (!immediateParentUsed) {
+    primaryParts.push(normalized);
+  }
+
+  // Block properties (between content and context separator)
+  const blockProps = parseBlockProperties(block.content);
+  const blockPropLines = formatProperties(blockProps, blockAllowList);
+  primaryParts.push(...blockPropLines);
+
+  // Context section
+  const contextParts: string[] = [];
+
+  const pageInfo = pageMap.get(block.pageId);
+  if (pageInfo?.name) {
+    contextParts.push(`[Page: ${pageInfo.name}]`);
+    const pagePropLines = formatProperties(pageInfo.properties, pageAllowList);
+    contextParts.push(...pagePropLines);
+  }
+
+  // Ancestor context (walk up parent chain, skip immediate parent if already used)
   const ancestors: string[] = [];
   let currentId: number | undefined = block.parentId;
+  if (immediateParentUsed) {
+    const parent = blockMap.get(block.parentId);
+    currentId = parent?.parentId;
+  }
   while (currentId && currentId !== block.pageId) {
     const parent = blockMap.get(currentId);
     if (!parent) break;
@@ -112,12 +144,13 @@ function buildEmbeddingText(
     if (content) ancestors.unshift(`> ${content}`);
     currentId = parent.parentId;
   }
-  parts.push(...ancestors);
+  contextParts.push(...ancestors);
 
-  // Block's own content
-  parts.push(normalizeContent(block.content));
+  if (contextParts.length === 0) {
+    return primaryParts.join("\n");
+  }
 
-  return parts.join("\n");
+  return primaryParts.join("\n") + "\n\n--- Context ---\n" + contextParts.join("\n");
 }
 
 export function cancelIndexing(): void {
@@ -139,6 +172,8 @@ export async function indexBlocks(
   indexingState.progress = { done: 0, total: 0 };
 
   const settings = getSettings();
+  const pageAllowList = parseAllowList(settings.pageProperties);
+  const blockAllowList = parseAllowList(settings.blockProperties);
 
   try {
     // Check if schema version changed
@@ -282,7 +317,7 @@ export async function indexBlocks(
 
       const blockInfo = blockMap.get(block.id);
       const pageInfo = pageMap.get(block.page?.id ?? 0);
-      const embeddingText = buildEmbeddingText(block.id, blockMap, pageMap);
+      const embeddingText = buildEmbeddingText(block.id, blockMap, pageMap, pageAllowList, blockAllowList);
       toEmbed.push({
         blockId,
         content: truncate(embeddingText, 4000),
