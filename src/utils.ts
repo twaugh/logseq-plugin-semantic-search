@@ -1,27 +1,28 @@
 export function normalizeContent(content: string): string {
+  if (!content) return "";
   let text = content;
+
   // Strip property lines (key:: value)
   text = text.replace(/^[a-zA-Z_-]+::.*$/gm, "");
-  // Strip block references ((uuid))
-  text = text.replace(/\(\([0-9a-f-]+\)\)/g, "");
-  // Strip markdown bold/italic markers
-  text = text.replace(/\*{1,3}(.*?)\*{1,3}/g, "$1");
-  text = text.replace(/_{1,3}(.*?)_{1,3}/g, "$1");
-  // Strip tags #[[page]] -> page, #tag -> tag
-  text = text.replace(/#\[\[([^\]]*)\]\]/g, "$1");
-  text = text.replace(/#([a-zA-Z][\w-]*)/g, "$1");
-  // Strip page references [[page]] -> page
-  text = text.replace(/\[\[([^\]]*)\]\]/g, "$1");
-  // Strip markdown headings
-  text = text.replace(/^#{1,6}\s+/gm, "");
-  // Strip markdown links [text](url) -> text
-  text = text.replace(/\[([^\]]*)\]\([^)]*\)/g, "$1");
-  // Strip markdown images ![alt](url)
-  text = text.replace(/!\[([^\]]*)\]\([^)]*\)/g, "$1");
-  // Strip inline code markers
-  text = text.replace(/`([^`]*)`/g, "$1");
-  // Collapse whitespace
+
+  // Strip Logseq block references ((uuid))
+  // Logseq UUIDs are standard 36-char strings or short refs.
+  text = text.replace(/\(\([0-9a-fA-F-]+\)\)/g, "");
+
+  // Strip raw URLs from images, but PRESERVE the alt text
+  // ![Diagram of architecture](https://...) -> Diagram of architecture
+  text = text.replace(/!\[([^\]]*)\]\([^)]+\)/g, "$1");
+
+  // Strip raw URLs from links, but PRESERVE the anchor text in brackets
+  // [Logseq Website](https://logseq.com) -> [Logseq Website]
+  text = text.replace(/\[([^\]]+)\]\([^)]+\)/g, "[$1]");
+
+  // Strip bare URLs that aren't in markdown format
+  text = text.replace(/(?:https?|ftp):\/\/[\n\S]+/g, "");
+
+  // Collapse excess whitespace and newlines
   text = text.replace(/\s+/g, " ").trim();
+
   return text;
 }
 

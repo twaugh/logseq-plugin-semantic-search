@@ -14,49 +14,45 @@ describe("normalizeContent", () => {
     );
   });
 
-  it("strips markdown bold and italic", () => {
-    expect(normalizeContent("**bold** and *italic*")).toBe("bold and italic");
-  });
-
-  it("strips heading markers", () => {
-    expect(normalizeContent("## Heading Two")).toBe("Heading Two");
-  });
-
-  it("strips markdown links, keeps text", () => {
+  it("strips markdown link URLs, keeps bracketed text", () => {
     expect(normalizeContent("[click here](http://example.com)")).toBe(
-      "click here",
+      "[click here]",
     );
   });
 
-  it("strips inline code markers", () => {
-    expect(normalizeContent("use `const x = 1`")).toBe("use const x = 1");
+  it("strips image URLs, keeps alt text", () => {
+    expect(normalizeContent("![Diagram](http://example.com/img.png)")).toBe(
+      "Diagram",
+    );
   });
 
-  it("keeps TODO markers", () => {
-    expect(normalizeContent("TODO Buy groceries")).toBe("TODO Buy groceries");
+  it("strips bare URLs", () => {
+    expect(normalizeContent("visit https://example.com/page today")).toBe(
+      "visit today",
+    );
   });
 
-  it("strips page references, keeps text", () => {
-    expect(normalizeContent("Talk to [[Jon Jones]]")).toBe("Talk to Jon Jones");
-  });
-
-  it("strips tags with page references", () => {
-    expect(normalizeContent("some task #[[Fred Bloggs]]")).toBe("some task Fred Bloggs");
-  });
-
-  it("strips simple tags", () => {
-    expect(normalizeContent("important #urgent")).toBe("important urgent");
+  it("preserves markdown formatting", () => {
+    expect(normalizeContent("**bold** and *italic*")).toBe("**bold** and *italic*");
+    expect(normalizeContent("## Heading Two")).toBe("## Heading Two");
+    expect(normalizeContent("use `const x = 1`")).toBe("use `const x = 1`");
+    expect(normalizeContent("Talk to [[Jon Jones]]")).toBe("Talk to [[Jon Jones]]");
+    expect(normalizeContent("important #urgent")).toBe("important #urgent");
   });
 
   it("collapses whitespace", () => {
     expect(normalizeContent("a   b\n\nc")).toBe("a b c");
   });
 
-  it("handles combined formatting", () => {
+  it("strips properties and URLs but preserves other formatting", () => {
     const input =
       "priority:: high\n## TODO **Buy** groceries from [store](http://x.com)";
     const result = normalizeContent(input);
-    expect(result).toBe("TODO Buy groceries from store");
+    expect(result).toBe("## TODO **Buy** groceries from [store]");
+  });
+
+  it("returns empty string for falsy input", () => {
+    expect(normalizeContent("")).toBe("");
   });
 });
 
