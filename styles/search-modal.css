@@ -16,7 +16,7 @@
   background: var(--ls-primary-background-color, #fff);
   color: var(--ls-primary-text-color, #333);
   border-radius: 8px;
-  width: 600px;
+  width: 900px;
   max-width: 90vw;
   max-height: 70vh;
   display: flex;
