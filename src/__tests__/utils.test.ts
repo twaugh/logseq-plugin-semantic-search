@@ -14,11 +14,13 @@ describe("normalizeContent", () => {
     );
   });
 
-  it("strips embed macros", () => {
+  it("strips macros", () => {
     expect(normalizeContent("Before {{embed ((abc-123))}} after")).toBe(
       "Before after",
     );
     expect(normalizeContent("{{embed [[Some Page]]}}")).toBe("");
+    expect(normalizeContent("Results: {{query (property :type \"book\")}}")).toBe("Results:");
+    expect(normalizeContent("{{renderer :todomaster}}")).toBe("");
   });
 
   it("strips markdown link URLs, keeps bracketed text", () => {
