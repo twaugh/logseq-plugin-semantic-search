@@ -8,8 +8,8 @@ export function normalizeContent(content: string): string {
   // Strip Logseq block references ((uuid))
   text = text.replace(/\(\([0-9a-fA-F-]+\)\)/g, "");
 
-  // Strip Logseq embed macros {{embed ...}}
-  text = text.replace(/\{\{embed\s[^}]*\}\}/g, "");
+  // Strip Logseq macros {{embed ...}}, {{query ...}}, {{renderer ...}}, etc.
+  text = text.replace(/\{\{[^}]*\}\}/g, "");
 
   // Strip raw URLs from images, but PRESERVE the alt text
   // ![Diagram of architecture](https://...) -> Diagram of architecture
