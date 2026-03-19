@@ -151,6 +151,44 @@
   opacity: 0.6;
 }
 
+.ss-breadcrumb-code {
+  font-family: monospace;
+  font-size: 0.9em;
+}
+
+.ss-breadcrumb-page-link {
+  color: inherit;
+  text-decoration: none;
+  cursor: alias;
+  border-radius: 3px;
+  padding: 0 2px;
+}
+
+.ss-breadcrumb-page-link:hover {
+  background: var(--ls-secondary-background-color, #f0f0f0);
+}
+
+.ss-breadcrumb-page-link .ss-bracket {
+  opacity: 0.3;
+}
+
+.ss-breadcrumb-highlight {
+  background: var(--ls-page-mark-bg-color, rgba(255, 255, 0, 0.3));
+  color: inherit;
+}
+
+.ss-breadcrumb-block-ref {
+  color: inherit;
+  text-decoration: underline dashed;
+  cursor: alias;
+}
+
+.ss-breadcrumb-url {
+  color: inherit;
+  text-decoration: underline;
+  cursor: alias;
+}
+
 .ss-result-content {
   font-size: 13px;
   line-height: 1.4;
