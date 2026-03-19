@@ -110,6 +110,51 @@ export function createSearchModal(): void {
   document.addEventListener("keydown", handleKeydown);
 
   const resultsContainer = document.getElementById("ss-results")!;
+
+  resultsContainer.addEventListener("click", (e) => {
+    const pageLink = (e.target as HTMLElement).closest(".ss-breadcrumb-page-link") as HTMLAnchorElement | null;
+    if (pageLink) {
+      e.preventDefault();
+      e.stopPropagation();
+      const pageName = pageLink.getAttribute("data-page");
+      if (pageName) {
+        if (e.shiftKey) {
+          logseq.Editor.getPage(pageName).then((page) => {
+            if (page?.id) logseq.Editor.openInRightSidebar(page.id);
+          });
+        } else {
+          logseq.App.pushState("page", { name: pageName });
+          hideModal();
+        }
+      }
+    }
+    const blockRefLink = (e.target as HTMLElement).closest(".ss-breadcrumb-block-ref") as HTMLAnchorElement | null;
+    if (blockRefLink) {
+      e.preventDefault();
+      e.stopPropagation();
+      const blockId = blockRefLink.getAttribute("data-block-ref");
+      if (blockId) {
+        if (e.shiftKey) {
+          logseq.Editor.openInRightSidebar(blockId);
+        } else {
+          logseq.Editor.getBlock(blockId).then(async (block) => {
+            if (block?.page?.id) {
+              const page = await logseq.Editor.getPage(block.page.id);
+              if (page?.name) {
+                logseq.Editor.scrollToBlockInPage(page.name, blockId);
+              }
+            }
+          });
+          hideModal();
+        }
+      }
+    }
+    const urlLink = (e.target as HTMLElement).closest(".ss-breadcrumb-url") as HTMLAnchorElement | null;
+    if (urlLink) {
+      e.stopPropagation();
+    }
+  });
+
   document.addEventListener("keydown", (e) => {
     if (e.key === "Shift") resultsContainer.classList.add("shift-held");
   });
@@ -336,8 +381,7 @@ async function fetchBreadcrumbs(blockId: string, pageName: string): Promise<stri
       if (!rows?.[0]) break;
       const [content, parentUuid] = rows[0];
       const firstLine = content.split("\n")[0];
-      const truncated = firstLine.length > 50;
-      ancestors.unshift(truncated ? firstLine.slice(0, 50) + "..." : firstLine);
+      ancestors.unshift(firstLine);
       childUuid = parentUuid;
     } catch {
       break;
@@ -466,7 +510,7 @@ function renderBlockElement(block: DisplayBlock, extraClass = ""): HTMLDivElemen
       : block.content;
 
   const breadcrumbHtml = block.breadcrumbs
-    .map((b) => `<span class="ss-breadcrumb-segment">${escapeHtml(b)}</span>`)
+    .map((b) => `<span class="ss-breadcrumb-segment">${formatBreadcrumbHtml(b)}</span>`)
     .join('<span class="ss-breadcrumb-sep">›</span>');
 
   item.innerHTML = `
@@ -485,6 +529,10 @@ function renderBlockElement(block: DisplayBlock, extraClass = ""): HTMLDivElemen
   });
 
   item.addEventListener("click", async (e) => {
+    const target = e.target as HTMLElement;
+    if (target.closest(".ss-breadcrumb-page-link") || target.closest(".ss-breadcrumb-block-ref") || target.closest(".ss-breadcrumb-url")) {
+      return;
+    }
     if (e.shiftKey) {
       try {
         logseq.Editor.openInRightSidebar(block.blockId);
@@ -674,6 +722,78 @@ function escapeHtml(text: string): string {
   const div = document.createElement("div");
   div.textContent = text;
   return div.innerHTML;
+}
+
+function escapeAttr(text: string): string {
+  return text.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+function formatBreadcrumbHtml(text: string): string {
+  const patterns: { regex: RegExp; type: string }[] = [
+    { regex: /`([^`]+)`/, type: "code" },
+    { regex: /\*\*([^*]+)\*\*/, type: "bold" },
+    { regex: /\*([^*]+)\*/, type: "italic" },
+    { regex: /~~([^~]+)~~/, type: "strikethrough" },
+    { regex: /\^\^([^^]+)\^\^/, type: "highlight" },
+    { regex: /#\[\[([^\]]+)\]\]/, type: "tag-bracket" },
+    { regex: /#([a-zA-Z0-9_-][a-zA-Z0-9_/-]*)/, type: "tag" },
+    { regex: /\[\[([^\]]+)\]\]/, type: "page-link" },
+    { regex: /\[([^\]]+)\]\(\(\(([0-9a-f-]+)\)\)\)/, type: "block-ref-link" },
+    { regex: /\[([^\]]+)\]\((https?:\/\/[^)]+)\)/, type: "md-link" },
+    { regex: /https?:\/\/[^\s<>)\]]+/, type: "bare-url" },
+  ];
+
+  const parts: string[] = [];
+  let remaining = text;
+
+  while (remaining.length > 0) {
+    let earliest: { index: number; length: number; html: string } | null = null;
+
+    for (const p of patterns) {
+      const match = remaining.match(p.regex);
+      if (match && match.index !== undefined) {
+        let html = "";
+        if (p.type === "code") {
+          html = `<code class="ss-breadcrumb-code">${escapeHtml(match[1])}</code>`;
+        } else if (p.type === "bold") {
+          html = `<strong>${formatBreadcrumbHtml(match[1])}</strong>`;
+        } else if (p.type === "italic") {
+          html = `<em>${formatBreadcrumbHtml(match[1])}</em>`;
+        } else if (p.type === "strikethrough") {
+          html = `<del>${formatBreadcrumbHtml(match[1])}</del>`;
+        } else if (p.type === "highlight") {
+          html = `<mark class="ss-breadcrumb-highlight">${formatBreadcrumbHtml(match[1])}</mark>`;
+        } else if (p.type === "tag-bracket" || p.type === "tag") {
+          html = `<a class="ss-breadcrumb-page-link" data-page="${escapeAttr(match[1])}" href="#">` +
+            `<span class="ss-bracket">#</span>${escapeHtml(match[1])}</a>`;
+        } else if (p.type === "page-link") {
+          html = `<a class="ss-breadcrumb-page-link" data-page="${escapeAttr(match[1])}" href="#">` +
+            `<span class="ss-bracket">[[</span>${escapeHtml(match[1])}<span class="ss-bracket">]]</span></a>`;
+        } else if (p.type === "block-ref-link") {
+          html = `<a class="ss-breadcrumb-block-ref" data-block-ref="${escapeAttr(match[2])}" href="#">${escapeHtml(match[1])}</a>`;
+        } else if (p.type === "md-link") {
+          html = `<a class="ss-breadcrumb-url" href="${escapeAttr(match[2])}" target="_blank" rel="noopener">${escapeHtml(match[1])}</a>`;
+        } else if (p.type === "bare-url") {
+          html = `<a class="ss-breadcrumb-url" href="${escapeAttr(match[0])}" target="_blank" rel="noopener">${escapeHtml(match[0])}</a>`;
+        }
+        const candidate = { index: match.index, length: match[0].length, html };
+        if (!earliest || candidate.index < earliest.index) {
+          earliest = candidate;
+        }
+      }
+    }
+
+    if (earliest) {
+      parts.push(escapeHtml(remaining.slice(0, earliest.index)));
+      parts.push(earliest.html);
+      remaining = remaining.slice(earliest.index + earliest.length);
+    } else {
+      parts.push(escapeHtml(remaining));
+      break;
+    }
+  }
+
+  return parts.join("");
 }
 
 export function showModal(): void {

@@ -116,7 +116,7 @@
 
 .ss-result-item:hover,
 .ss-result-item.active {
-  background: var(--ls-secondary-background-color, #f0f0f0);
+  background: var(--ls-tertiary-background-color, rgba(0, 0, 0, 0.05));
   border-color: var(--ls-border-color, #e0e0e0);
 }
 
@@ -149,6 +149,56 @@
 .ss-breadcrumb-sep {
   margin: 0 4px;
   opacity: 0.6;
+}
+
+.ss-breadcrumb-code {
+  font-family: monospace;
+  font-size: 0.9em;
+}
+
+.ss-breadcrumb-page-link {
+  color: inherit;
+  text-decoration: none;
+  cursor: alias;
+  border-radius: 3px;
+  padding: 0 2px;
+}
+
+.ss-breadcrumb-page-link:hover {
+  background: var(--ls-tertiary-background-color, rgba(0, 0, 0, 0.05));
+}
+
+.ss-breadcrumb-page-link .ss-bracket {
+  opacity: 0.3;
+}
+
+.ss-breadcrumb-highlight {
+  background: var(--ls-page-mark-bg-color, rgba(255, 255, 0, 0.3));
+  color: inherit;
+}
+
+.ss-breadcrumb-block-ref {
+  color: inherit;
+  text-decoration: underline dashed;
+  cursor: alias;
+  border-radius: 3px;
+  padding: 0 2px;
+}
+
+.ss-breadcrumb-block-ref:hover {
+  background: var(--ls-tertiary-background-color, rgba(0, 0, 0, 0.05));
+}
+
+.ss-breadcrumb-url {
+  color: inherit;
+  text-decoration: underline;
+  cursor: alias;
+  border-radius: 3px;
+  padding: 0 2px;
+}
+
+.ss-breadcrumb-url:hover {
+  background: var(--ls-tertiary-background-color, rgba(0, 0, 0, 0.05));
 }
 
 .ss-result-content {
